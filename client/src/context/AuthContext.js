@@ -1,12 +1,12 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import React, { createContext, useState, useEffect, useContext } from "react";
+import axios from "axios";
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -17,36 +17,43 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   // Configure axios defaults
-  axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+  axios.defaults.baseURL =
+    process.env.REACT_APP_API_URL || "http://localhost:5001";
   axios.defaults.withCredentials = true;
 
   // Set auth token in axios headers
   const setAuthToken = (token) => {
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      localStorage.setItem('token', token);
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      localStorage.setItem("token", token);
     } else {
-      delete axios.defaults.headers.common['Authorization'];
-      localStorage.removeItem('token');
+      delete axios.defaults.headers.common["Authorization"];
+      localStorage.removeItem("token");
     }
   };
 
   // Load user on mount
   useEffect(() => {
     const loadUser = async () => {
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       if (token) {
         setAuthToken(token);
         try {
-          const response = await axios.get('/api/auth/me');
-          setUser(response.data.data);
+          const response = await axios.get("/api/auth/me");
+          const userData = response.data.data;
+          // Normalize user id so client code can rely on `user.id`
+          const normalized = {
+            ...userData,
+            id: userData.id || userData._id,
+          };
+          setUser(normalized);
         } catch (err) {
-          console.error('Failed to load user:', err);
+          console.error("Failed to load user:", err);
           setAuthToken(null);
         }
       }
-      
+
       setLoading(false);
     };
 
@@ -57,15 +64,15 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       setError(null);
-      const response = await axios.post('/api/auth/register', userData);
-      
+      const response = await axios.post("/api/auth/register", userData);
+
       const { token, user } = response.data;
       setAuthToken(token);
       setUser(user);
-      
+
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.message || 'Registration failed';
+      const message = err.response?.data?.message || "Registration failed";
       setError(message);
       return { success: false, message };
     }
@@ -75,15 +82,15 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setError(null);
-      const response = await axios.post('/api/auth/login', credentials);
-      
+      const response = await axios.post("/api/auth/login", credentials);
+
       const { token, user } = response.data;
       setAuthToken(token);
       setUser(user);
-      
+
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.message || 'Login failed';
+      const message = err.response?.data?.message || "Login failed";
       setError(message);
       return { success: false, message };
     }
@@ -92,9 +99,9 @@ export const AuthProvider = ({ children }) => {
   // Logout user
   const logout = async () => {
     try {
-      await axios.get('/api/auth/logout');
+      await axios.get("/api/auth/logout");
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error("Logout error:", err);
     } finally {
       setAuthToken(null);
       setUser(null);
@@ -108,12 +115,8 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
-    setError
+    setError,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

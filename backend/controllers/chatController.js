@@ -293,3 +293,75 @@ exports.searchUsers = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Add a member to a group conversation (group admin only)
+// @route   POST /api/chat/conversations/:conversationId/add-member
+// @access  Private
+exports.addMember = async (req, res, next) => {
+  try {
+    const { conversationId } = req.params;
+    const { userId } = req.body; // user to add
+    const requesterId = req.user.id;
+
+    // Validate
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'userId is required' });
+    }
+
+    const conversation = await Conversation.findById(conversationId).populate('groupAdmin', 'name email');
+    if (!conversation) {
+      return res.status(404).json({ success: false, message: 'Conversation not found' });
+    }
+
+    if (!conversation.isGroupChat) {
+      return res.status(400).json({ success: false, message: 'Not a group conversation' });
+    }
+
+    // Only group admin can add
+    if (!conversation.groupAdmin || conversation.groupAdmin._id.toString() !== requesterId) {
+      return res.status(403).json({ success: false, message: 'Only group admin can add members' });
+    }
+
+    // Check user exists
+    const userToAdd = await require('../models/User').findById(userId).select('name email');
+    if (!userToAdd) {
+      return res.status(404).json({ success: false, message: 'User to add not found' });
+    }
+
+    // Already a participant?
+    if (conversation.participants.includes(userId)) {
+      return res.status(400).json({ success: false, message: 'User is already a participant' });
+    }
+
+    // Add to participants
+    conversation.participants.push(userId);
+    conversation.updatedAt = new Date();
+    await conversation.save();
+
+    // Create a system message announcing the new member
+    const Message = require('../models/Message');
+    const admin = req.user;
+    const msgContent = `${userToAdd.name} was added to the group by ${admin.name}`;
+    const systemMessage = await Message.create({
+      sender: requesterId,
+      conversation: conversationId,
+      content: msgContent,
+      messageType: 'text'
+    });
+
+    await systemMessage.populate('sender', 'name email');
+
+    // Update conversation last message
+    conversation.lastMessage = systemMessage._id;
+    await conversation.save();
+
+    // Emit socket events to conversation room
+    const io = req.app.get('io');
+    io.to(conversationId).emit('participantAdded', { conversationId, user: userToAdd });
+    io.to(conversationId).emit('receiveMessage', { conversationId, message: systemMessage });
+
+    res.status(200).json({ success: true, message: 'User added to group', data: conversation });
+  } catch (error) {
+    next(error);
+  }
+};

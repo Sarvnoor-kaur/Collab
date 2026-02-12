@@ -6,6 +6,7 @@ const {
   getMessages,
   markAsRead,
   searchUsers
+  , addMember
 } = require('../controllers/chatController');
 const { protect } = require('../middlewares/auth');
 
@@ -42,6 +43,11 @@ router.get('/conversations', getConversations);
 // Message routes
 router.get('/messages/:conversationId', getMessages);
 router.put('/read/:conversationId', markAsRead);
+
+// Group admin can add a member
+router.post('/conversations/:conversationId/add-member', [
+  body('userId').isMongoId().withMessage('Invalid userId')
+], addMember);
 
 // User search
 router.get('/users/search', searchUsers);

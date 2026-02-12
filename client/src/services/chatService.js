@@ -49,3 +49,12 @@ export const searchUsers = async (query) => {
   });
   return response.data;
 };
+
+// Add a member to an existing conversation (group admin only)
+export const addMember = async (conversationId, userId) => {
+  const response = await axios.post(
+    `${API_URL}/api/chat/conversations/${conversationId}/add-member`,
+    { userId }
+  );
+  return response.data;
+};
