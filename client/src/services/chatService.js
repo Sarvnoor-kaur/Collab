@@ -1,10 +1,9 @@
 import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+import { fullApi, API } from '../config/apiRoutes';
 
 // Create or get conversation
 export const createConversation = async (participantId) => {
-  const response = await axios.post(`${API_URL}/api/chat/conversation`, {
+  const response = await axios.post(fullApi(API.CHAT.CONVERSATION), {
     participantId
   });
   return response.data;
@@ -12,7 +11,7 @@ export const createConversation = async (participantId) => {
 
 // Create group conversation
 export const createGroupConversation = async (participantIds, groupName) => {
-  const response = await axios.post(`${API_URL}/api/chat/conversation`, {
+  const response = await axios.post(fullApi(API.CHAT.CONVERSATION), {
     participantIds,
     groupName,
     isGroupChat: true
@@ -22,7 +21,7 @@ export const createGroupConversation = async (participantIds, groupName) => {
 
 // Get all conversations
 export const getConversations = async (page = 1, limit = 20) => {
-  const response = await axios.get(`${API_URL}/api/chat/conversations`, {
+  const response = await axios.get(fullApi(API.CHAT.CONVERSATIONS), {
     params: { page, limit }
   });
   return response.data;
@@ -30,7 +29,7 @@ export const getConversations = async (page = 1, limit = 20) => {
 
 // Get messages for a conversation
 export const getMessages = async (conversationId, page = 1, limit = 50) => {
-  const response = await axios.get(`${API_URL}/api/chat/messages/${conversationId}`, {
+  const response = await axios.get(fullApi(API.CHAT.MESSAGES(conversationId)), {
     params: { page, limit }
   });
   return response.data;
@@ -38,13 +37,13 @@ export const getMessages = async (conversationId, page = 1, limit = 50) => {
 
 // Mark messages as read
 export const markAsRead = async (conversationId) => {
-  const response = await axios.put(`${API_URL}/api/chat/read/${conversationId}`);
+  const response = await axios.put(fullApi(API.CHAT.READ(conversationId)));
   return response.data;
 };
 
 // Search users
 export const searchUsers = async (query) => {
-  const response = await axios.get(`${API_URL}/api/chat/users/search`, {
+  const response = await axios.get(fullApi(API.CHAT.SEARCH_USERS), {
     params: { query }
   });
   return response.data;
@@ -53,7 +52,7 @@ export const searchUsers = async (query) => {
 // Add a member to an existing conversation (group admin only)
 export const addMember = async (conversationId, userId) => {
   const response = await axios.post(
-    `${API_URL}/api/chat/conversations/${conversationId}/add-member`,
+    fullApi(API.CHAT.ADD_MEMBER(conversationId)),
     { userId }
   );
   return response.data;

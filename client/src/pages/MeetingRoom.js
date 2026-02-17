@@ -25,6 +25,7 @@ const MeetingRoom = () => {
   const peerConnections = useRef(new Map());
   const queuedCandidates = useRef(new Map());
   const pendingOffers = useRef(new Set());
+  const queuedAnswers = useRef(new Map());
   const screenStream = useRef(null);
 
   // ICE servers configuration (STUN servers)
@@ -252,24 +253,54 @@ const MeetingRoom = () => {
 
       // Add local stream tracks
       if (localStream) {
-        localStream.getTracks().forEach((track) => {
+        const localTracks = localStream.getTracks();
+        console.log(
+          `Adding local tracks to PC for ${socketId}:`,
+          localTracks.map((t) => t.kind),
+        );
+        localTracks.forEach((track) => {
           peerConnection.addTrack(track, localStream);
         });
       }
 
-      // Handle incoming stream
+      // Handle incoming stream/tracks and merge into a persistent MediaStream
       peerConnection.ontrack = (event) => {
-        console.log("Received remote track from:", socketId);
-        setPeers((prev) => {
-          const newPeers = new Map(prev);
-          newPeers.set(socketId, {
-            stream: event.streams[0],
-            audioEnabled: true,
-            videoEnabled: true,
-            userName: userName || "Participant",
+        try {
+          console.log(
+            "Received remote track from:",
+            socketId,
+            event.track?.kind,
+            event,
+          );
+
+          setPeers((prev) => {
+            const newPeers = new Map(prev);
+            const existing = newPeers.get(socketId) || {
+              stream: null,
+              audioEnabled: true,
+              videoEnabled: true,
+              userName: userName || "Participant",
+            };
+
+            // If the browser provided a streams[0], use it as the canonical stream
+            if (event.streams && event.streams[0]) {
+              existing.stream = event.streams[0];
+            } else if (event.track) {
+              // Create or reuse a MediaStream and add the incoming track
+              if (!existing.stream) existing.stream = new MediaStream();
+              // Avoid adding duplicate tracks
+              const alreadyHas = existing.stream
+                .getTracks()
+                .some((t) => t.id === event.track.id);
+              if (!alreadyHas) existing.stream.addTrack(event.track);
+            }
+
+            newPeers.set(socketId, existing);
+            return newPeers;
           });
-          return newPeers;
-        });
+        } catch (err) {
+          console.error("Error processing remote track:", err);
+        }
       };
 
       // Handle ICE candidates
@@ -320,9 +351,24 @@ const MeetingRoom = () => {
             targetSocketId: socketId,
             offer,
           });
+          // If an answer arrived earlier and was queued, apply it now
+          const queued = queuedAnswers.current.get(socketId);
+          if (queued) {
+            try {
+              console.log(`Applying queued answer for ${socketId}`);
+              await peerConnection.setRemoteDescription(
+                new RTCSessionDescription(queued),
+              );
+              queuedAnswers.current.delete(socketId);
+            } catch (e) {
+              console.warn(`Failed to apply queued answer for ${socketId}:`, e);
+            }
+          }
         } else {
           // Defer offer until localStream is ready
-          console.log(`Deferring offer to ${socketId} until localStream is ready`);
+          console.log(
+            `Deferring offer to ${socketId} until localStream is ready`,
+          );
           pendingOffers.current.add(socketId);
         }
       }
@@ -340,13 +386,55 @@ const MeetingRoom = () => {
       const peerConnection =
         peerConnections.current.get(senderSocketId) ||
         (await createPeerConnection(senderSocketId, false, senderUserName));
-
       // Set remote description for incoming offer
       await peerConnection.setRemoteDescription(
         new RTCSessionDescription(offer),
       );
 
-      // Now create and set answer
+      // Ensure we have local media and that our local tracks are added to the PC
+      if (!localStream) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+          setLocalStream(stream);
+          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
+          // Add local tracks to THIS peer connection (and to any others)
+          stream.getTracks().forEach((track) => {
+            try {
+              // Add track to this peerConnection
+              peerConnection.addTrack(track, stream);
+            } catch (e) {
+              console.warn(
+                "Failed to add local track to peerConnection in offer handler",
+                e,
+              );
+            }
+          });
+
+          // Also attach tracks to any existing peer connections
+          peerConnections.current.forEach((pc, sid) => {
+            if (pc === peerConnection) return; // already added
+            try {
+              stream.getTracks().forEach((track) => {
+                // add only if sender for this track kind doesn't exist
+                const senders = pc
+                  .getSenders()
+                  .filter((s) => s.track && s.track.kind === track.kind);
+                if (senders.length === 0) pc.addTrack(track, stream);
+              });
+            } catch (e) {
+              // ignore individual failures
+            }
+          });
+        } catch (err) {
+          console.error("Failed to get user media in offer handler:", err);
+        }
+      }
+
+      // Now create and set answer (after local tracks are present)
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
 
@@ -374,39 +462,35 @@ const MeetingRoom = () => {
 
       const peerConnection = peerConnections.current.get(senderSocketId);
       if (!peerConnection) {
+        // No PC yet — queue the answer until PC is created
         console.warn(
-          `No RTCPeerConnection found for ${senderSocketId}, ignoring answer`,
+          `No RTCPeerConnection found for ${senderSocketId}, queueing answer`,
         );
+        queuedAnswers.current.set(senderSocketId, answer);
         return;
       }
-
-      // Defensive check: only set remote answer when we are in have-local-offer
-      // Setting an answer in `stable` state causes InvalidStateError.
-      console.log(
-        `Peer ${senderSocketId} signalingState before setRemoteDescription:`,
-        peerConnection.signalingState,
-      );
 
       if (!answer || !answer.sdp) {
         console.warn(
-          `Received empty or malformed answer from ${senderSocketId}, skipping setRemoteDescription`,
+          `Received empty or malformed answer from ${senderSocketId}, skipping`,
         );
         return;
       }
 
-      if (peerConnection.signalingState !== "have-local-offer") {
-        // We received an answer but we don't have a pending local offer.
-        // This commonly happens due to duplicate listeners or out-of-order messages.
-        // Skip applying the answer to avoid InvalidStateError.
+      // Try applying the answer immediately. If the RTCPeerConnection isn't
+      // in the correct state yet (InvalidStateError), queue the answer and it
+      // will be applied when/if we create a local offer for this peer.
+      try {
+        await peerConnection.setRemoteDescription(
+          new RTCSessionDescription(answer),
+        );
+      } catch (err) {
         console.warn(
-          `Ignoring answer for ${senderSocketId} because signalingState is ${peerConnection.signalingState}`,
+          `setRemoteDescription failed for ${senderSocketId}, queuing answer:`,
+          err,
         );
-        return;
+        queuedAnswers.current.set(senderSocketId, answer);
       }
-
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(answer),
-      );
 
       // If there are queued ICE candidates for this socket, add them now
       const pending = queuedCandidates.current.get(senderSocketId) || [];
@@ -774,12 +858,26 @@ const RemoteVideo = ({
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
+      // Attempt to play the video element; some browsers require an explicit play call
+      const p = videoRef.current.play();
+      if (p && typeof p.then === "function") {
+        p.catch((err) => {
+          // Log and ignore autoplay errors (muted remote videos should autoplay)
+          console.warn("Remote video play() failed:", err);
+        });
+      }
     }
   }, [stream]);
 
   return (
     <div className="video-container">
-      <video ref={videoRef} autoPlay playsInline className="video-element" />
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className="video-element"
+      />
       <div className="video-overlay">
         <span className="participant-name">{userName || "Participant"}</span>
         {!audioEnabled && <span className="muted-icon">🔇</span>}

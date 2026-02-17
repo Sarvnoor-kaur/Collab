@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
+import { fullApi, API } from '../config/apiRoutes';
 
 const AuthContext = createContext();
 
@@ -12,13 +13,14 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
+  
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Configure axios defaults
   axios.defaults.baseURL =
-    process.env.REACT_APP_API_URL || "http://localhost:5001";
+  process.env.REACT_APP_API_URL || "http://localhost:5001";
   axios.defaults.withCredentials = true;
 
   // Set auth token in axios headers
@@ -40,7 +42,7 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         setAuthToken(token);
         try {
-          const response = await axios.get("/api/auth/me");
+          const response = await axios.get(fullApi(API.AUTH.ME));
           const userData = response.data.data;
           // Normalize user id so client code can rely on `user.id`
           const normalized = {

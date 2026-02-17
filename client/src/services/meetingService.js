@@ -1,11 +1,10 @@
 import axios from "axios";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5001";
+import { fullApi, API } from "../config/apiRoutes";
 
 // Create meeting for a conversation
 export const createMeeting = async (conversationId) => {
   const response = await axios.post(
-    `${API_URL}/api/meetings/conversations/${conversationId}/meetings`,
+    fullApi(API.MEETINGS.CREATE_FOR_CONVERSATION(conversationId)),
   );
   // Normalize return value for easier consumption by callers
   return {
@@ -18,20 +17,24 @@ export const createMeeting = async (conversationId) => {
 
 // Get meeting by meetingId
 export const getMeeting = async (meetingId) => {
-  const response = await axios.get(`${API_URL}/api/meetings/${meetingId}`);
+  const response = await axios.get(
+    fullApi(API.MEETINGS.GET_BY_MEETING_ID(meetingId)),
+  );
   return response.data;
 };
 
 // End meeting
 export const endMeeting = async (meetingId) => {
-  const response = await axios.post(`${API_URL}/api/meetings/${meetingId}/end`);
+  const response = await axios.post(
+    fullApi(API.MEETINGS.END_MEETING(meetingId)),
+  );
   return response.data;
 };
 
 // Get active meetings for a conversation
 export const getActiveMeetings = async (conversationId) => {
   const response = await axios.get(
-    `${API_URL}/api/meetings/conversations/${conversationId}/meetings/active`,
+    fullApi(API.MEETINGS.ACTIVE_FOR_CONVERSATION(conversationId)),
   );
   return response.data;
 };
@@ -43,7 +46,7 @@ export const getMeetingHistory = async (
   limit = 20,
 ) => {
   const response = await axios.get(
-    `${API_URL}/api/meetings/conversations/${conversationId}/meetings/history`,
+    fullApi(API.MEETINGS.HISTORY_FOR_CONVERSATION(conversationId)),
     { params: { page, limit } },
   );
   return response.data;
