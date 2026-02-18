@@ -20,6 +20,7 @@ const MeetingRoom = () => {
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   const localVideoRef = useRef(null);
   const peerConnections = useRef(new Map());
@@ -27,6 +28,10 @@ const MeetingRoom = () => {
   const pendingOffers = useRef(new Set());
   const queuedAnswers = useRef(new Map());
   const screenStream = useRef(null);
+  const recorderRef = useRef(null);
+  const recordingChunksRef = useRef([]);
+  const canvasRef = useRef(null);
+  const drawIntervalRef = useRef(null);
 
   // ICE servers configuration (STUN servers)
   const iceServers = {
@@ -669,6 +674,131 @@ const MeetingRoom = () => {
     socket.emit("screenShareStateChange", { meetingId, isSharing: false });
   };
 
+  // Recording (host-side) - mix canvas (videos) + all audio tracks
+  const startRecording = async () => {
+    if (!isAdmin) return;
+    if (isRecording) return;
+
+    // Create canvas for mixing video tiles
+    const vids = Array.from(document.querySelectorAll(".video-element"));
+    const count = vids.length || 1;
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    const tileW = 640;
+    const tileH = 360;
+    const canvas = document.createElement("canvas");
+    canvas.width = cols * tileW;
+    canvas.height = rows * tileH;
+    canvasRef.current = canvas;
+    const ctx = canvas.getContext("2d");
+
+    const draw = () => {
+      ctx.fillStyle = "#111";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const videoEls = Array.from(document.querySelectorAll(".video-element"));
+      videoEls.forEach((v, i) => {
+        const x = (i % cols) * tileW;
+        const y = Math.floor(i / cols) * tileH;
+        try {
+          ctx.drawImage(v, x, y, tileW, tileH);
+        } catch (e) {}
+      });
+    };
+
+    drawIntervalRef.current = setInterval(draw, 1000 / 15);
+
+    // Capture canvas stream
+    const videoStream = canvas.captureStream(15);
+
+    // Mix audio tracks using WebAudio
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const destination = audioCtx.createMediaStreamDestination();
+
+    // Add local audio
+    if (localStream) {
+      localStream.getAudioTracks().forEach((t) => {
+        try {
+          const src = audioCtx.createMediaStreamSource(new MediaStream([t]));
+          src.connect(destination);
+        } catch (e) {}
+      });
+    }
+
+    // Add remote audios
+    Array.from(peers.values()).forEach((p) => {
+      try {
+        if (p.stream) {
+          p.stream.getAudioTracks().forEach((t) => {
+            try {
+              const src = audioCtx.createMediaStreamSource(
+                new MediaStream([t]),
+              );
+              src.connect(destination);
+            } catch (e) {}
+          });
+        }
+      } catch (e) {}
+    });
+
+    // Combine video + mixed audio
+    const combined = new MediaStream();
+    videoStream.getVideoTracks().forEach((t) => combined.addTrack(t));
+    destination.stream.getAudioTracks().forEach((t) => combined.addTrack(t));
+
+    // Start MediaRecorder
+    const recorder = new MediaRecorder(combined, {
+      mimeType: "video/webm; codecs=vp9,opus",
+    });
+    recorderRef.current = recorder;
+    recordingChunksRef.current = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size) recordingChunksRef.current.push(e.data);
+    };
+    recorder.onstop = async () => {
+      clearInterval(drawIntervalRef.current);
+      const blob = new Blob(recordingChunksRef.current, { type: "video/webm" });
+      // Upload to server
+      try {
+        const form = new FormData();
+        form.append(
+          "recording",
+          blob,
+          `meeting-${meetingId}-${Date.now()}.webm`,
+        );
+        const res = await fetch("/api/recordings", {
+          method: "POST",
+          body: form,
+        });
+        const json = await res.json();
+        // Optionally notify chat with link
+        if (json?.url && socket) {
+          socket.emit("sendMessage", {
+            conversationId: meeting.conversation._id,
+            content: `Recording available: ${json.url}`,
+            messageType: "text",
+          });
+        }
+      } catch (e) {
+        console.error("Failed to upload recording", e);
+      } finally {
+        setIsRecording(false);
+      }
+    };
+
+    recorder.start(1000);
+    setIsRecording(true);
+  };
+
+  const stopRecording = () => {
+    if (!recorderRef.current) return;
+    try {
+      recorderRef.current.stop();
+    } catch (e) {
+      console.warn("stop recorder", e);
+    }
+    recorderRef.current = null;
+  };
+
   const leaveMeeting = () => {
     cleanup();
     navigate("/chat");
@@ -825,6 +955,15 @@ const MeetingRoom = () => {
             ⏹️ End Meeting
           </button>
         )}
+        {isAdmin && (
+          <button
+            onClick={() => (isRecording ? stopRecording() : startRecording())}
+            className={`control-btn ${isRecording ? "active" : ""}`}
+            title={isRecording ? "Stop Recording" : "Start Recording"}
+          >
+            {isRecording ? "⏹️ Recording" : "⏺️ Record"}
+          </button>
+        )}
         {/* Participants Modal */}
         {showParticipants && (
           <div className="participants-modal">
@@ -854,6 +993,7 @@ const RemoteVideo = ({
   userName,
 }) => {
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -867,6 +1007,13 @@ const RemoteVideo = ({
         });
       }
     }
+    if (audioRef.current && stream) {
+      // Attach audio to hidden audio element (unmuted) so playback is audible
+      audioRef.current.srcObject = stream;
+      const pa = audioRef.current.play();
+      if (pa && typeof pa.then === "function")
+        pa.catch((e) => console.warn("Remote audio play failed", e));
+    }
   }, [stream]);
 
   return (
@@ -878,6 +1025,7 @@ const RemoteVideo = ({
         playsInline
         className="video-element"
       />
+      <audio ref={audioRef} className="hidden-audio" autoPlay playsInline />
       <div className="video-overlay">
         <span className="participant-name">{userName || "Participant"}</span>
         {!audioEnabled && <span className="muted-icon">🔇</span>}
