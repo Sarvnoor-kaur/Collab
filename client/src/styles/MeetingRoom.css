@@ -213,3 +213,32 @@
 .video-grid:has(.video-container:nth-child(6):last-child) {
   grid-template-columns: repeat(3, 1fr);
 }
+
+/* Active speaker highlight */
+.video-container.active {
+  box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.18);
+  transform: scale(1.02);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+/* Controls center floating style */
+.controls-floating {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 18px;
+  display: flex;
+  gap: 12px;
+  background: rgba(20,20,20,0.75);
+  padding: 10px 14px;
+  border-radius: 40px;
+  z-index: 40;
+}
+
+/* Hidden audio elements (still attached to DOM for playback) */
+.hidden-audio {
+  display: none;
+}
+
+/* Small participant overlay tweaks */
+.video-overlay { left: 12px; right: auto; bottom: 12px; }
