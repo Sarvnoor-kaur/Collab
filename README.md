@@ -7,6 +7,7 @@ A production-ready MERN stack application with:
 - ✅ **Phase 2:** Real-Time Chat System (Socket.io)
 - ✅ **Phase 3:** User Discovery & Online Presence
 
+
 ## 🏗️ Project Structure
 
 ```
