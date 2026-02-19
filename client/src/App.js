@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
 import UserDiscovery from './pages/UserDiscovery';
 import MeetingRoom from './pages/MeetingRoom';
+import Landing from './pages/Landing';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Routes>
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Landing />} />
             <Route
               path="/dashboard"
               element={
