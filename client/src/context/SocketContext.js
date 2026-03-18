@@ -20,67 +20,70 @@ export const SocketProvider = ({ children }) => {
 
   // Initialize socket connection
   useEffect(() => {
-    if (user) {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        console.error('No token found for socket connection');
-        return;
-      }
-
-      // Create socket connection with authentication
-      const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5001', {
-        auth: {
-          token: token
-        },
-        transports: ['websocket', 'polling']
-      });
-
-      // Connection event handlers
-      newSocket.on('connect', () => {
-        console.log('Socket connected:', newSocket.id);
-        setConnected(true);
-      });
-
-      newSocket.on('disconnect', () => {
-        console.log('Socket disconnected');
-        setConnected(false);
-      });
-
-      newSocket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error.message);
-        setConnected(false);
-      });
-
-      // Handle user online/offline events
-      newSocket.on('userOnline', (data) => {
-        setOnlineUsers(prev => {
-          if (!prev.includes(data.userId)) {
-            return [...prev, data.userId];
-          }
-          return prev;
-        });
-      });
-
-      newSocket.on('userOffline', (data) => {
-        setOnlineUsers(prev => prev.filter(id => id !== data.userId));
-      });
-
-      setSocket(newSocket);
-
-      // Cleanup on unmount
-      return () => {
-        newSocket.close();
-      };
-    } else {
-      // Disconnect socket if user logs out
-      if (socket) {
-        socket.close();
-        setSocket(null);
-        setConnected(false);
-      }
+    if (!user) {
+      setSocket(null);
+      setConnected(false);
+      setOnlineUsers([]);
+      return;
     }
-  }, [user, socket]);
+
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      console.error('No token found for socket connection');
+      setSocket(null);
+      setConnected(false);
+      return;
+    }
+
+    // Create socket connection with authentication
+    const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5001', {
+      auth: {
+        token: token
+      },
+      transports: ['websocket', 'polling']
+    });
+
+    // Connection event handlers
+    newSocket.on('connect', () => {
+      console.log('Socket connected:', newSocket.id);
+      setConnected(true);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Socket disconnected');
+      setConnected(false);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error.message);
+      setConnected(false);
+    });
+
+    // Handle user online/offline events
+    newSocket.on('userOnline', (data) => {
+      setOnlineUsers(prev => {
+        if (!prev.includes(data.userId)) {
+          return [...prev, data.userId];
+        }
+        return prev;
+      });
+    });
+
+    newSocket.on('userOffline', (data) => {
+      setOnlineUsers(prev => prev.filter(id => id !== data.userId));
+    });
+
+    setSocket(newSocket);
+
+    // Cleanup when user changes/unmounts
+    return () => {
+      newSocket.close();
+      setSocket(null);
+      setConnected(false);
+      setOnlineUsers([]);
+    };
+  }, [user]);
 
   // Join conversation room
   const joinConversation = useCallback((conversationId) => {

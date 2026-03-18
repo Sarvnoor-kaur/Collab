@@ -20,6 +20,7 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
   const [creatingMeeting, setCreatingMeeting] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const conversationId = conversation?._id;
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -28,9 +29,10 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
   };
 
   const loadMessages = useCallback(async () => {
+    if (!conversationId) return;
     try {
       setLoading(true);
-      const response = await getMessages(conversation._id);
+      const response = await getMessages(conversationId);
       setMessages(response.data);
       scrollToBottom();
     } catch (error) {
@@ -38,37 +40,38 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
     } finally {
       setLoading(false);
     }
-  }, [conversation._id]);
+  }, [conversationId]);
 
   const markConversationAsRead = useCallback(async () => {
+    if (!conversationId) return;
     try {
-      await markAsRead(conversation._id);
+      await markAsRead(conversationId);
       onConversationUpdate();
     } catch (error) {
       console.error("Failed to mark as read:", error);
     }
-  }, [conversation._id, onConversationUpdate]);
+  }, [conversationId, onConversationUpdate]);
 
   // Load messages when conversation changes
   useEffect(() => {
-    if (conversation) {
-      loadMessages();
-      joinConversation(conversation._id);
-      markConversationAsRead();
+    if (!conversationId) return;
 
-      return () => {
-        leaveConversation(conversation._id);
-      };
-    }
-  }, [conversation, conversation._id, joinConversation, leaveConversation, loadMessages, markConversationAsRead]);
+    loadMessages();
+    joinConversation(conversationId);
+    markConversationAsRead();
+
+    return () => {
+      leaveConversation(conversationId);
+    };
+  }, [conversationId, joinConversation, leaveConversation, loadMessages, markConversationAsRead]);
 
   // Socket event listeners
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !conversationId) return;
 
     // Receive new message
     socket.on("receiveMessage", (data) => {
-      if (data.conversationId === conversation._id) {
+      if (data.conversationId === conversationId) {
         setMessages((prev) => [...prev, data.message]);
         scrollToBottom();
 
@@ -81,7 +84,7 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
 
     // User typing
     socket.on("userTyping", (data) => {
-      if (data.conversationId === conversation._id) {
+      if (data.conversationId === conversationId) {
         setTypingUsers((prev) => {
           if (!prev.find((u) => u.userId === data.userId)) {
             return [...prev, { userId: data.userId, userName: data.userName }];
@@ -93,7 +96,7 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
 
     // User stopped typing
     socket.on("userStoppedTyping", (data) => {
-      if (data.conversationId === conversation._id) {
+      if (data.conversationId === conversationId) {
         setTypingUsers((prev) => prev.filter((u) => u.userId !== data.userId));
       }
     });
@@ -103,7 +106,7 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
       socket.off("userTyping");
       socket.off("userStoppedTyping");
     };
-  }, [socket, conversation._id, markConversationAsRead]);
+  }, [socket, conversationId, markConversationAsRead]);
 
   const getConversationName = () => {
     if (conversation.isGroupChat) {
@@ -308,7 +311,7 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
       </div>
 
       {/* Message Input */}
-      <MessageInput conversationId={conversation._id} />
+      <MessageInput conversationId={conversationId} />
 
       {/* Group Info Modal */}
       {showGroupInfo && (

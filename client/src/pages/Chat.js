@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
@@ -18,21 +18,7 @@ const Chat = () => {
   const [loading, setLoading] = useState(true);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
 
-  // Load conversations
-  useEffect(() => {
-    loadConversations();
-  }, []);
-
-  // Handle conversation from navigation state
-  useEffect(() => {
-    if (location.state?.selectedConversation) {
-      setSelectedConversation(location.state.selectedConversation);
-      // Clear the state
-      window.history.replaceState({}, document.title);
-    }
-  }, [location]);
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getConversations();
@@ -42,7 +28,21 @@ const Chat = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Load conversations
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  // Handle conversation from navigation state
+  useEffect(() => {
+    if (location.state?.selectedConversation) {
+      setSelectedConversation(location.state.selectedConversation);
+      // Clear the state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleConversationSelect = (conversation) => {
     setSelectedConversation(conversation);
