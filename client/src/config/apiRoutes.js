@@ -56,4 +56,5 @@ export const ROUTES = {
 // Helper to build full API URL
 export const fullApi = (path) => `${API.BASE}${path}`;
 
-export default { API, ROUTES, fullApi };
+const apiRoutes = { API, ROUTES, fullApi };
+export default apiRoutes;

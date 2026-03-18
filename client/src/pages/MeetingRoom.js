@@ -5,6 +5,7 @@ import { useSocket } from "../context/SocketContext";
 import { getMeeting, endMeeting } from "../services/meetingService";
 import "../styles/MeetingRoom.css";
 
+/* eslint-disable react-hooks/exhaustive-deps */
 const MeetingRoom = () => {
   const { meetingId } = useParams();
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ const MeetingRoom = () => {
 
   // When localStream becomes available, ensure existing peer connections have our tracks
   useEffect(() => {
-    if (!localStream) return;
+    if (!localStream || !socket) return;
     peerConnections.current.forEach(async (pc, socketId) => {
       try {
         // Replace existing senders' tracks (camera/mic) if present

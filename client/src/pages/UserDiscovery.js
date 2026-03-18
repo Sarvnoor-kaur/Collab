@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
@@ -22,19 +22,6 @@ const UserDiscovery = () => {
     loadAllUsers();
   }, []);
 
-  // Debounced search
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      const delayDebounce = setTimeout(() => {
-        handleSearch();
-      }, 300);
-
-      return () => clearTimeout(delayDebounce);
-    } else {
-      loadAllUsers();
-    }
-  }, [searchQuery]);
-
   const loadAllUsers = async () => {
     try {
       setLoading(true);
@@ -49,7 +36,7 @@ const UserDiscovery = () => {
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     try {
       setSearching(true);
       setError('');
@@ -61,7 +48,20 @@ const UserDiscovery = () => {
     } finally {
       setSearching(false);
     }
-  };
+  }, [searchQuery]);
+
+  // Debounced search
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const delayDebounce = setTimeout(() => {
+        handleSearch();
+      }, 300);
+
+      return () => clearTimeout(delayDebounce);
+    } else {
+      loadAllUsers();
+    }
+  }, [searchQuery, handleSearch]);
 
   const handleStartChat = async (selectedUser) => {
     try {

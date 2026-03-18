@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
 import { getMessages, markAsRead } from "../../services/chatService";
@@ -21,6 +21,34 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  const loadMessages = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getMessages(conversation._id);
+      setMessages(response.data);
+      scrollToBottom();
+    } catch (error) {
+      console.error("Failed to load messages:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [conversation._id]);
+
+  const markConversationAsRead = useCallback(async () => {
+    try {
+      await markAsRead(conversation._id);
+      onConversationUpdate();
+    } catch (error) {
+      console.error("Failed to mark as read:", error);
+    }
+  }, [conversation._id, onConversationUpdate]);
+
   // Load messages when conversation changes
   useEffect(() => {
     if (conversation) {
@@ -32,7 +60,7 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
         leaveConversation(conversation._id);
       };
     }
-  }, [conversation]);
+  }, [conversation, conversation._id, joinConversation, leaveConversation, loadMessages, markConversationAsRead]);
 
   // Socket event listeners
   useEffect(() => {
@@ -75,35 +103,7 @@ const MessageWindow = ({ conversation, onConversationUpdate }) => {
       socket.off("userTyping");
       socket.off("userStoppedTyping");
     };
-  }, [socket, conversation]);
-
-  const loadMessages = async () => {
-    try {
-      setLoading(true);
-      const response = await getMessages(conversation._id);
-      setMessages(response.data);
-      scrollToBottom();
-    } catch (error) {
-      console.error("Failed to load messages:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const markConversationAsRead = async () => {
-    try {
-      await markAsRead(conversation._id);
-      onConversationUpdate();
-    } catch (error) {
-      console.error("Failed to mark as read:", error);
-    }
-  };
-
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-  };
+  }, [socket, conversation._id, markConversationAsRead]);
 
   const getConversationName = () => {
     if (conversation.isGroupChat) {

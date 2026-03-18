@@ -229,9 +229,9 @@ const Register = () => {
           {/* Terms */}
           <p className="mt-6 text-center text-xs text-slate-500">
             By creating an account, you agree to our{' '}
-            <a href="#" className="text-slate-400 hover:text-cyan-400 transition-colors">Terms of Service</a>
+            <button className="text-slate-400 hover:text-cyan-400 transition-colors">Terms of Service</button>
             {' '}and{' '}
-            <a href="#" className="text-slate-400 hover:text-cyan-400 transition-colors">Privacy Policy</a>
+            <button className="text-slate-400 hover:text-cyan-400 transition-colors">Privacy Policy</button>
           </p>
         </motion.div>
       </div>

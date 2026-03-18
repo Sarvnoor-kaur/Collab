@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { searchUsers } from '../../services/chatService';
 import { createConversation, createGroupConversation } from '../../services/chatService';
 
@@ -11,6 +11,18 @@ const NewChatModal = ({ onClose, onConversationCreated }) => {
   const [groupName, setGroupName] = useState('');
   const [error, setError] = useState('');
 
+  const handleSearch = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await searchUsers(searchQuery);
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error('Search failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery]);
+
   useEffect(() => {
     if (searchQuery.trim()) {
       const delayDebounce = setTimeout(() => {
@@ -21,19 +33,7 @@ const NewChatModal = ({ onClose, onConversationCreated }) => {
     } else {
       setSearchResults([]);
     }
-  }, [searchQuery]);
-
-  const handleSearch = async () => {
-    try {
-      setLoading(true);
-      const response = await searchUsers(searchQuery);
-      setSearchResults(response.data);
-    } catch (error) {
-      console.error('Search failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [searchQuery, handleSearch]);
 
   const handleUserSelect = async (user) => {
     if (isGroupChat) {

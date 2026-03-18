@@ -80,7 +80,7 @@ export const SocketProvider = ({ children }) => {
         setConnected(false);
       }
     }
-  }, [user]);
+  }, [user, socket]);
 
   // Join conversation room
   const joinConversation = useCallback((conversationId) => {

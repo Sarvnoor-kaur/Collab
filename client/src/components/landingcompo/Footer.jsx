@@ -63,15 +63,15 @@ export default function Footer() {
             © 2024 CollabSphere. Built with ❤️ by developers, for developers.
           </p>
           <div className="flex gap-6 text-sm text-slate-500">
-            <a href="#" className="hover:text-cyan-400 transition-colors">
+            <button className="hover:text-cyan-400 transition-colors">
               Privacy
-            </a>
-            <a href="#" className="hover:text-cyan-400 transition-colors">
+            </button>
+            <button className="hover:text-cyan-400 transition-colors">
               Terms
-            </a>
-            <a href="#" className="hover:text-cyan-400 transition-colors">
+            </button>
+            <button className="hover:text-cyan-400 transition-colors">
               Contact
-            </a>
+            </button>
           </div>
         </div>
       </div>
