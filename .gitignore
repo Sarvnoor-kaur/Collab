@@ -6,3 +6,8 @@ build/
 *.log
 .vscode/
 coverage/
+
+# Terraform sensitive files
+terraform.tfvars
+*.tfvars
+!terraform.tfvars.example
