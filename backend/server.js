@@ -10,6 +10,18 @@ const errorHandler = require("./middlewares/errorHandler");
 const { initializeSocket } = require("./sockets/socketHandler");
 const { initializeMeetingSocket } = require("./sockets/meetingHandler");
 
+// Prometheus metrics
+const client = require('prom-client');
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
+
+const httpRequestDuration = new client.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  registers: [register]
+});
+
 // Load env vars
 dotenv.config();
 
@@ -46,19 +58,36 @@ app.use(
   }),
 );
 
-// Serve uploaded recordings in development (use S3 or other storage in prod)
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
 // Mount routers
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/chat", require("./routes/chatRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/meetings", require("./routes/meetingRoutes"));
-app.use("/api/recordings", require("./routes/recordingRoutes"));
+
+// Metrics middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = (Date.now() - start) / 1000;
+    httpRequestDuration.labels(req.method, req.route?.path || req.path, res.statusCode).observe(duration);
+  });
+  next();
+});
 
 // Health check
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ success: true, message: "Server is running" });
+  res.status(200).json({ 
+    success: true, 
+    message: "Server is running",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Metrics endpoint for Prometheus
+app.get("/metrics", async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
 });
 
 // Error handler (must be last)

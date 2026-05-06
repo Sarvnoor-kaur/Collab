@@ -1,0 +1,10 @@
+# AWS Credentials (Replace with your actual credentials)
+aws_access_key = "YOUR_AWS_ACCESS_KEY_HERE"
+aws_secret_key = "YOUR_AWS_SECRET_KEY_HERE"
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# EC2 Configuration
+instance_type = "t2.medium"
+key_name      = "collabsphere-key"
