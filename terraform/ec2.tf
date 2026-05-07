@@ -114,6 +114,24 @@ resource "aws_security_group" "collabsphere_sg" {
     description = "Grafana"
   }
 
+  # Kubernetes NodePort - Frontend
+  ingress {
+    from_port   = 30300
+    to_port     = 30300
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Kubernetes Frontend NodePort"
+  }
+
+  # Kubernetes NodePort - Backend
+  ingress {
+    from_port   = 30500
+    to_port     = 30500
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Kubernetes Backend NodePort"
+  }
+
   # Outbound
   egress {
     from_port   = 0
@@ -130,7 +148,7 @@ resource "aws_security_group" "collabsphere_sg" {
 
 # EC2 Instance
 resource "aws_instance" "collabsphere" {
-  ami           = "ami-0c55b159cbfafe1f0" # Ubuntu 22.04 (update for your region)
+  ami     = "ami-0f5ee92e2d63afc18" # Ubuntu 22.04 (update for your region)
   instance_type = var.instance_type
   key_name      = var.key_name
 
@@ -141,47 +159,10 @@ resource "aws_instance" "collabsphere" {
     volume_type = "gp3"
   }
 
+  # Minimal user_data - just update system
   user_data = <<-EOF
               #!/bin/bash
-              set -e
-              
-              # Update system
               apt-get update -y
-              apt-get upgrade -y
-              
-              # Install Docker
-              apt-get install -y docker.io docker-compose git openjdk-11-jdk curl wget
-              systemctl start docker
-              systemctl enable docker
-              usermod -aG docker ubuntu
-              
-              # Install Jenkins
-              wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | apt-key add -
-              sh -c 'echo deb http://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
-              apt-get update -y
-              apt-get install -y jenkins
-              usermod -aG docker jenkins
-              systemctl start jenkins
-              systemctl enable jenkins
-              
-              # Install kubectl
-              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-              install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-              
-              # Install Minikube
-              curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-              install minikube-linux-amd64 /usr/local/bin/minikube
-              
-              # Start Minikube as ubuntu user
-              su - ubuntu -c "minikube start --driver=docker --cpus=2 --memory=4096"
-              su - ubuntu -c "minikube addons enable ingress"
-              
-              # Configure kubectl for jenkins user
-              mkdir -p /var/lib/jenkins/.kube
-              cp /home/ubuntu/.kube/config /var/lib/jenkins/.kube/config
-              chown -R jenkins:jenkins /var/lib/jenkins/.kube
-              
-              echo "Setup complete!" > /tmp/setup-complete.txt
               EOF
 
   tags = {

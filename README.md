@@ -140,8 +140,12 @@ collabsphere/
 
 ### Prerequisites
 - Node.js 18+
-- Docker & Docker Compose
+- Docker & Docker Compose (for local development)
 - MongoDB (local or Atlas)
+- **For AWS Deployment:**
+  - Terraform installed
+  - AWS account with credentials
+  - EC2 key pair
 
 ### Local Development
 
@@ -180,6 +184,24 @@ docker-compose -f docker/docker-compose.yml logs -f
 docker-compose -f docker/docker-compose.yml down
 ```
 
+### AWS Deployment (Automated)
+
+**One Command Setup:**
+
+```powershell
+.\setup.ps1
+```
+
+This will:
+1. Create EC2 instance with Terraform
+2. Install Docker, Jenkins, kubectl, Minikube via SSH
+3. Configure everything automatically
+4. Display Jenkins URL and access info
+
+**Time:** 10-15 minutes
+
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete step-by-step instructions.
+
 ---
 
 ## 📖 Complete Step-by-Step Deployment Guide
@@ -188,51 +210,34 @@ docker-compose -f docker/docker-compose.yml down
 
 For a **complete step-by-step guide** from zero to production deployment, see:
 
-**➡️ [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Complete 14-phase deployment guide
+**➡️ [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Complete deployment guide with Terraform
 
-**➡️ [KUBERNETES_GUIDE.md](KUBERNETES_GUIDE.md)** - Kubernetes/Minikube deployment guide
+### Quick Deploy
 
-### Deployment Approach
+**Automated Setup (Windows):**
+```powershell
+.\setup.ps1
+```
 
-**Kubernetes with Minikube** (Production-ready)
-- Jenkins CI/CD pipeline automatically deploys to Kubernetes
-- Features: Auto-scaling, rolling updates, service discovery
-- Deployment time: ~10 minutes
-- Best for: Production simulation and learning Kubernetes
-
-### What's Included
+**What's Included:**
 
 **DEPLOYMENT_GUIDE.md** covers:
-- ✅ **Phase 1-2**: Prerequisites and project overview
-- ✅ **Phase 3**: Local code adjustments (Terraform, Jenkinsfile, Docker Compose)
-- ✅ **Phase 4**: AWS infrastructure provisioning with Terraform
-- ✅ **Phase 5**: EC2 instance access and Minikube verification
-- ✅ **Phase 6**: Jenkins configuration and plugin setup
-- ✅ **Phase 7**: Docker Hub credentials setup
-- ✅ **Phase 8**: Jenkins pipeline creation
-- ✅ **Phase 9**: GitHub webhook configuration
-- ✅ **Phase 10**: Running the CI/CD pipeline (Kubernetes deployment)
-- ✅ **Phase 11**: Kubernetes deployment verification
-- ✅ **Phase 12**: Prometheus + Grafana monitoring setup
-- ✅ **Phase 13**: Troubleshooting common issues
-- ✅ **Phase 14**: Cleanup to avoid AWS charges
-
-**KUBERNETES_GUIDE.md** covers:
-- ✅ Minikube setup and verification
-- ✅ Understanding Kubernetes resources
-- ✅ Manual Kubernetes deployment
-- ✅ Accessing applications via NodePort
-- ✅ Jenkins pipeline with Kubernetes
-- ✅ Kubernetes management commands
-- ✅ Scaling and rolling updates
-- ✅ Troubleshooting Kubernetes issues
-- ✅ Production considerations
+- ✅ Prerequisites and AWS setup
+- ✅ Terraform configuration
+- ✅ Automated EC2 setup via PowerShell script
+- ✅ Jenkins configuration
+- ✅ Docker Hub credentials setup
+- ✅ Pipeline creation and deployment
+- ✅ Kubernetes deployment verification
+- ✅ Monitoring setup
+- ✅ Troubleshooting
+- ✅ Cleanup instructions
 
 **Perfect for:**
 - 🎓 Learning DevOps from scratch
 - 💼 Interview preparation and demos
 - 🚀 First-time AWS deployment
-- 📊 Understanding complete CI/CD pipelines
+- 📊 Understanding CI/CD pipelines
 - ☸️ Learning Kubernetes basics
 
 ---

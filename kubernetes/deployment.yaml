@@ -66,8 +66,8 @@ spec:
     spec:
       containers:
       - name: backend
-        image: DOCKERHUB_USERNAME/collabsphere-backend:latest
-        imagePullPolicy: Never
+        image: sarvnoorkaur/collabsphere-backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
         envFrom:
@@ -106,8 +106,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: DOCKERHUB_USERNAME/collabsphere-frontend:latest
-        imagePullPolicy: Never
+        image: sarvnoorkaur/collabsphere-frontend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
         resources:

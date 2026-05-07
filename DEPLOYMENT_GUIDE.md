@@ -360,6 +360,7 @@ git --version
 minikube start --driver=docker --cpus=2 --memory=4096
 
 # Verify
+
 minikube status
 ```
 
@@ -369,17 +370,48 @@ minikube status
 
 ## 6. Configuring Jenkins
 
-### Step 6.1: Access Jenkins
+### Step 6.1: Fix Jenkins Java Version (If Needed)
+
+**⚠️ IMPORTANT:** If Jenkins is not starting or you see Java version errors, run this fix:
+
+**From Windows PowerShell:**
+```powershell
+# Run the fix script
+.\fix-jenkins.ps1
+```
+
+**Or manually via SSH:**
+```bash
+# SSH into EC2
+ssh -i C:\Users\sarvn\Downloads\collabsphere-key.pem ubuntu@YOUR_EC2_IP
+
+# Run these commands
+sudo systemctl stop jenkins
+sudo wget -O /opt/jenkins/jenkins.war https://get.jenkins.io/war-stable/2.440.3/jenkins.war
+sudo chown jenkins:jenkins /opt/jenkins/jenkins.war
+sudo systemctl start jenkins
+
+# Wait 60 seconds
+sleep 60
+
+# Check status
+sudo systemctl status jenkins
+```
+
+**Why this is needed:** The latest Jenkins requires Java 21, but EC2 has Java 11. Version 2.440.3 is the last LTS that supports Java 11.
+
+### Step 6.2: Access Jenkins
 
 1. Open your web browser
 2. Navigate to: `http://YOUR_EC2_PUBLIC_IP:8080`
 
 **If page doesn't load:**
 - Wait 2-3 more minutes (Jenkins takes time to start)
+- Run the fix from Step 6.1
 - Check security group allows port 8080
 - Verify Jenkins is running: `sudo systemctl status jenkins`
 
-### Step 6.2: Get Initial Admin Password
+### Step 6.3: Get Initial Admin Password
 
 In your EC2 SSH terminal, run:
 
@@ -394,12 +426,13 @@ a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 
 Copy this password.
 
-### Step 6.3: Complete Jenkins Setup Wizard
+### Step 6.4: Complete Jenkins Setup Wizard
 
 1. Paste the password in Jenkins UI
 2. Click **Continue**
 3. Click **Install suggested plugins**
 4. Wait for plugins to install (5-10 minutes)
+   - **If plugins fail to install:** This is likely due to Jenkins version mismatch. Run the fix from Step 6.1.
 5. Create First Admin User:
    - Username: `admin`
    - Password: `YourStrongPassword`
@@ -410,19 +443,23 @@ Copy this password.
 8. Click **Save and Finish**
 9. Click **Start using Jenkins**
 
-### Step 6.4: Install Additional Plugins
+### Step 6.5: Install Additional Plugins
 
 1. Go to **Manage Jenkins** → **Manage Plugins**
 2. Click **Available** tab
 3. Search and select:
    - ✅ Docker Pipeline
    - ✅ Docker plugin
+   - ✅ Kubernetes
+   - ✅ Kubernetes CLI
    - ✅ Git plugin (usually pre-installed)
    - ✅ Pipeline plugin (usually pre-installed)
 4. Click **Install without restart**
 5. Wait for installation to complete
 
-### Step 6.5: Configure Docker Permission for Jenkins
+**Note:** If "Pipeline" option is not showing up in Jenkins, it means plugins didn't install properly. This is usually due to Jenkins version mismatch - run the fix from Step 6.1.
+
+### Step 6.6: Configure Docker Permission for Jenkins
 
 In your EC2 SSH terminal:
 

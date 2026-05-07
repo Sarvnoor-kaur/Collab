@@ -23,3 +23,7 @@ override.tf.json
 .terraformrc
 terraform.rc
 terraform/terraform.tfvars.example:3
+
+
+
+# "C:\Users\sarvn\Downloads\collabsphere-key.pem"

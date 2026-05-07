@@ -8,12 +8,12 @@ pipeline {
     }
     
     stages {
-        stage('Clone Repository') {
-            steps {
-                echo '📥 Cloning repository...'
-                git branch: 'main', url: 'https://github.com/Sarvnoor-kaur/Collab'
-            }
-        }
+        // stage('Clone Repository') {
+        //     steps {
+        //         echo '📥 Cloning repository...'
+        //         git branch: 'main', url: 'https://github.com/Sarvnoor-kaur/Collab'
+        //     }
+        // }
         
         stage('Build Docker Images') {
             steps {
