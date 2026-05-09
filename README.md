@@ -1,681 +1,403 @@
-# 🚀 CollabSphere - Real-Time Collaboration Platform
+# 🚀 CollabSphere - DevOps CI/CD Setup
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Docker](https://img.shields.io/badge/docker-ready-blue)]()
-[![Kubernetes](https://img.shields.io/badge/kubernetes-ready-326CE5)]()
-[![AWS](https://img.shields.io/badge/AWS-deployed-orange)]()
-[![License](https://img.shields.io/badge/license-ISC-green)]()
+A complete DevOps setup for CollabSphere (MERN stack) with Jenkins CI/CD, Kubernetes deployment, and monitoring.
 
-> **Production-ready MERN stack application with complete DevOps pipeline featuring Docker, Jenkins CI/CD, Kubernetes orchestration, and Prometheus/Grafana monitoring.**
-
-## 📋 Table of Contents
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Architecture](#-architecture)
-- [Project Structure](#-project-structure)
-- [Quick Start](#-quick-start)
-- [Complete Deployment Guide](#-complete-deployment-guide)
-- [DevOps Setup](#-devops-setup)
-- [Deployment](#-deployment)
-- [Monitoring](#-monitoring)
-- [API Documentation](#-api-documentation)
-
----
-
-## ✨ Features
-
-### Application Features
-- 🔐 **JWT Authentication** - Secure user authentication
-- 💬 **Real-time Chat** - Socket.io powered messaging
-- 👥 **Group Conversations** - Multi-user chat rooms
-- 🎥 **Video Meetings** - WebRTC video conferencing
-- 🔍 **User Discovery** - Find and connect with users
-- 📱 **Responsive Design** - Mobile-first approach
-
-### DevOps Features
-- 🐳 **Dockerized** - Complete containerization
-- 🔄 **CI/CD Pipeline** - Jenkins automation
-- ☸️ **Kubernetes Ready** - Production orchestration
-- 📊 **Monitoring** - Prometheus + Grafana
-- ☁️ **Cloud Deployed** - AWS EC2 infrastructure
-- 🏗️ **Infrastructure as Code** - Terraform automation
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-```
-React 18 | Socket.io Client | Tailwind CSS | Framer Motion | Nginx
-```
-
-### Backend
-```
-Node.js | Express | Socket.io | MongoDB | JWT | Prometheus
-```
-
-### DevOps
-```
-Docker | Docker Compose | Jenkins | Kubernetes | Terraform | AWS EC2
-Prometheus | Grafana | GitHub Actions
-```
-
----
-
-## 🏗️ Architecture
+## 📋 Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Load Balancer                         │
-└────────────────────┬────────────────────────────────────┘
-                     │
-        ┌────────────┴────────────┐
-        │                         │
-        ▼                         ▼
-┌──────────────┐          ┌──────────────┐
-│   Frontend   │          │   Backend    │
-│   (React)    │◄────────►│  (Node.js)   │
-│   Nginx:80   │          │  Port:5000   │
-└──────────────┘          └──────┬───────┘
-                                 │
-                    ┌────────────┴────────────┐
-                    │                         │
-                    ▼                         ▼
-            ┌──────────────┐         ┌──────────────┐
-            │   MongoDB    │         │  Monitoring  │
-            │  Port:27017  │         │ Prometheus   │
-            └──────────────┘         │ Grafana      │
-                                     └──────────────┘
+┌─────────────────────┐         ┌──────────────────────────┐
+│  Jenkins EC2        │         │  Kubernetes EC2          │
+│  (Existing)         │────────▶│  (New)                   │
+│                     │   SSH   │                          │
+│  - Jenkins          │         │  - Minikube              │
+│  - Docker           │         │  - Prometheus            │
+│  - kubectl          │         │  - Grafana               │
+└─────────────────────┘         │  - Your App              │
+                                └──────────────────────────┘
 ```
 
----
+## 🎯 What This Setup Does
 
-## 📁 Project Structure
+1. **Jenkins Server** (Your existing EC2)
+   - Builds Docker images
+   - Pushes to Docker Hub
+   - Deploys to remote Kubernetes
 
-```
-collabsphere/
-├── backend/                    # Node.js backend
-│   ├── config/                # Database configuration
-│   ├── controllers/           # Route controllers
-│   ├── middlewares/           # Auth & error handling
-│   ├── models/                # MongoDB models
-│   ├── routes/                # API routes
-│   ├── sockets/               # Socket.io handlers
-│   └── server.js              # Entry point
-│
-├── client/                     # React frontend
-│   ├── public/
-│   ├── src/
-│   │   ├── components/        # React components
-│   │   ├── context/           # Context providers
-│   │   ├── pages/             # Page components
-│   │   └── services/          # API services
-│   └── nginx.conf             # Nginx configuration
-│
-├── docker/                     # Docker configurations
-│   ├── backend.Dockerfile     # Backend container
-│   ├── frontend.Dockerfile    # Frontend container
-│   └── docker-compose.yml     # Multi-container setup
-│
-├── jenkins/                    # CI/CD pipeline
-│   └── Jenkinsfile            # Pipeline configuration
-│
-├── kubernetes/                 # K8s manifests
-│   ├── deployment.yaml        # Deployments
-│   └── service.yaml           # Services
-│
-├── terraform/                  # Infrastructure as Code
-│   └── ec2.tf                 # AWS EC2 setup
-│
-├── monitoring/                 # Monitoring configs
-│   ├── prometheus.yml         # Prometheus config
-│   └── grafana-setup.md       # Grafana guide
-│
-└── README.md                   # This file
-```
+2. **Kubernetes Server** (New EC2)
+   - Runs your application in Minikube
+   - Prometheus for monitoring
+   - Grafana for dashboards
+   - Auto-scaling and health checks
 
----
-
-## 🚀 Quick Start
+## 🚀 Quick Start (15 minutes)
 
 ### Prerequisites
-- Node.js 18+
-- Docker & Docker Compose (for local development)
-- MongoDB (local or Atlas)
-- **For AWS Deployment:**
-  - Terraform installed
-  - AWS account with credentials
-  - EC2 key pair
 
-### Local Development
+- ✅ Existing Jenkins EC2 running
+- ✅ AWS credentials
+- ✅ Docker Hub account
+- ✅ SSH key pair (collabsphere-key.pem)
+- ✅ Terraform installed
 
-```bash
-# 1. Clone repository
-git clone https://github.com/YOUR_USERNAME/collabsphere.git
-cd collabsphere
-
-# 2. Backend setup
-cd backend
-npm install
-cp .env.example .env
-# Edit .env with your MongoDB URI and JWT secret
-npm start
-
-# 3. Frontend setup (new terminal)
-cd client
-npm install
-npm start
-```
-
-**Access:**
-- Frontend: http://localhost:3000
-- Backend: http://localhost:5000
-
-### Docker Setup (Local Testing)
-
-```bash
-# Build and run all services locally
-docker-compose -f docker/docker-compose.yml up -d
-
-# View logs
-docker-compose -f docker/docker-compose.yml logs -f
-
-# Stop services
-docker-compose -f docker/docker-compose.yml down
-```
-
-### AWS Deployment (Automated)
-
-**One Command Setup:**
+### Step 1: Create Kubernetes EC2
 
 ```powershell
-.\setup.ps1
-```
-
-This will:
-1. Create EC2 instance with Terraform
-2. Install Docker, Jenkins, kubectl, Minikube via SSH
-3. Configure everything automatically
-4. Display Jenkins URL and access info
-
-**Time:** 10-15 minutes
-
-See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete step-by-step instructions.
-
----
-
-## 📖 Complete Step-by-Step Deployment Guide
-
-### 🎯 New to DevOps? Start Here!
-
-For a **complete step-by-step guide** from zero to production deployment, see:
-
-**➡️ [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Complete deployment guide with Terraform
-
-### Quick Deploy
-
-**Automated Setup (Windows):**
-```powershell
-.\setup.ps1
-```
-
-**What's Included:**
-
-**DEPLOYMENT_GUIDE.md** covers:
-- ✅ Prerequisites and AWS setup
-- ✅ Terraform configuration
-- ✅ Automated EC2 setup via PowerShell script
-- ✅ Jenkins configuration
-- ✅ Docker Hub credentials setup
-- ✅ Pipeline creation and deployment
-- ✅ Kubernetes deployment verification
-- ✅ Monitoring setup
-- ✅ Troubleshooting
-- ✅ Cleanup instructions
-
-**Perfect for:**
-- 🎓 Learning DevOps from scratch
-- 💼 Interview preparation and demos
-- 🚀 First-time AWS deployment
-- 📊 Understanding CI/CD pipelines
-- ☸️ Learning Kubernetes basics
-
----
-
-## 🐳 DevOps Setup
-
-### 1. Docker Configuration
-
-**Build Images:**
-```bash
-# Backend
-docker build -t collabsphere-backend -f docker/backend.Dockerfile ./backend
-
-# Frontend
-docker build -t collabsphere-frontend -f docker/frontend.Dockerfile ./client
-```
-
-**Run with Docker Compose (Local Testing):**
-```bash
-docker-compose -f docker/docker-compose.yml up -d
-```
-
-**Production Deployment:**
-- Uses Kubernetes/Minikube via Jenkins CI/CD pipeline
-- See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete setup
-
-### 2. Jenkins CI/CD Pipeline
-
-**Setup Jenkins on EC2:**
-```bash
-# Install Jenkins
-sudo apt update
-sudo apt install -y openjdk-11-jdk
-wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo apt-key add -
-sudo sh -c 'echo deb http://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
-sudo apt update
-sudo apt install -y jenkins
-
-# Start Jenkins
-sudo systemctl start jenkins
-sudo systemctl enable jenkins
-
-# Get initial password
-sudo cat /var/lib/jenkins/secrets/initialAdminPassword
-```
-
-**Configure Pipeline:**
-1. Access Jenkins: `http://YOUR_EC2_IP:8080`
-2. Install suggested plugins
-3. Create new Pipeline job
-4. Point to `jenkins/Jenkinsfile`
-5. Configure GitHub webhook (optional)
-
-**Pipeline Stages:**
-```
-Clone → Build Images → Push to Docker Hub → Load to Minikube → Deploy to Kubernetes → Verify → Cleanup
-```
-
-### 3. Kubernetes Deployment
-
-**Deploy to Kubernetes:**
-```bash
-# Apply deployment manifest
-kubectl apply -f kubernetes/deployment.yaml
-
-# Apply services
-kubectl apply -f kubernetes/service.yaml
-
-# Check status
-kubectl get pods
-kubectl get services
-
-# Access application via NodePort
-# Frontend: http://MINIKUBE_IP:30300
-# Backend: http://MINIKUBE_IP:30500
-```
-
-**Scale Application:**
-```bash
-# Scale backend
-kubectl scale deployment backend --replicas=5
-
-# Scale frontend
-kubectl scale deployment frontend --replicas=3
-```
-
----
-
-## ☁️ Deployment
-
-### AWS EC2 Deployment
-
-**1. Using Terraform:**
-```bash
 cd terraform
-
-# Initialize Terraform
-terraform init
-
-# Plan deployment
-terraform plan
-
-# Apply configuration
-terraform apply -auto-approve
-
-# Get outputs
-terraform output
+terraform apply
 ```
 
-**2. Manual EC2 Setup:**
-
-```bash
-# SSH to EC2
-ssh -i your-key.pem ubuntu@YOUR_EC2_IP
-
-# Install Docker
-sudo apt update
-sudo apt install -y docker.io docker-compose
-sudo systemctl start docker
-sudo usermod -aG docker ubuntu
-
-# Clone repository
-git clone https://github.com/YOUR_USERNAME/collabsphere.git
-cd collabsphere
-
-# Deploy with Docker Compose
-docker-compose -f docker/docker-compose.yml up -d
+**Output:**
+```
+existing_jenkins_ip = "13.233.75.163"  # Your existing Jenkins
+k8s_public_ip = "X.X.X.X"              # New K8s server
+k8s_private_ip = "Y.Y.Y.Y"             # Use this in Jenkins
 ```
 
-**Security Group Ports:**
-| Port | Service | Description |
-|------|---------|-------------|
-| 22 | SSH | Remote access |
-| 80 | HTTP | Web traffic |
-| 3000 | Frontend | React app |
-| 5000 | Backend | API server |
-| 8080 | Jenkins | CI/CD |
-| 9090 | Prometheus | Metrics |
-| 3001 | Grafana | Dashboards |
+**Wait:** 5-7 minutes for setup to complete
 
----
+### Step 2: Setup SSH Connection
 
-## 📊 Monitoring
+#### On Kubernetes Server:
 
-### Prometheus Setup
-
-**Install Prometheus:**
 ```bash
-# Download Prometheus
-wget https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz
-tar xvfz prometheus-*.tar.gz
-cd prometheus-*
+# Connect to K8s server
+ssh -i C:\Users\sarvn\Downloads\collabsphere-key.pem ubuntu@<K8S_PUBLIC_IP>
 
-# Copy config
-cp ../monitoring/prometheus.yml .
+# Generate SSH key
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/jenkins_key -N ""
+
+# Add to authorized_keys
+cat ~/.ssh/jenkins_key.pub >> ~/.ssh/authorized_keys
+
+# Copy private key (copy entire output)
+cat ~/.ssh/jenkins_key
+```
+
+#### On Jenkins Server:
+
+```bash
+# Connect to Jenkins server
+ssh -i C:\Users\sarvn\Downloads\collabsphere-key.pem ubuntu@13.233.75.163
+
+# Switch to jenkins user
+sudo su - jenkins
+
+# Create SSH key file
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+nano ~/.ssh/k8s_key
+# Paste the private key, save with Ctrl+O, Enter, Ctrl+X
+
+# Set permissions
+chmod 600 ~/.ssh/k8s_key
+
+# Test connection (use K8s PRIVATE IP)
+ssh -i ~/.ssh/k8s_key ubuntu@<K8S_PRIVATE_IP> "echo 'Success'"
+```
+
+### Step 3: Configure Jenkins
+
+#### 3.1: Install SSH Agent Plugin
+
+1. Open Jenkins: `http://13.233.75.163:8080`
+2. Manage Jenkins → Manage Plugins
+3. Available → Search "SSH Agent"
+4. Install without restart
+
+#### 3.2: Add Credentials
+
+**Credential 1: K8s SSH Key**
+- Manage Jenkins → Manage Credentials → Add
+- Kind: `SSH Username with private key`
+- ID: `k8s-ssh-key`
+- Username: `ubuntu`
+- Private Key: Paste the key from Step 2
+- Click Create
+
+**Credential 2: K8s Server IP**
+- Manage Jenkins → Manage Credentials → Add
+- Kind: `Secret text`
+- ID: `k8s-server-ip`
+- Secret: `<K8S_PRIVATE_IP>` (from terraform output)
+- Click Create
+
+**Credential 3: Docker Hub** (if not already added)
+- Kind: `Username with password`
+- ID: `dockerhub-credentials`
+- Username: Your Docker Hub username
+- Password: Your Docker Hub password
+
+### Step 4: Create/Update Pipeline
+
+#### Option A: Update Existing Pipeline
+
+1. Go to your existing pipeline job
+2. Click Configure
+3. Replace script with content from `jenkins/Jenkinsfile`
+4. Save
+
+#### Option B: Create New Pipeline
+
+1. New Item → Pipeline
+2. Name: `collabsphere-k8s-deploy`
+3. Definition: `Pipeline script`
+4. Copy script from `jenkins/Jenkinsfile`
+5. Save
+
+### Step 5: Deploy
+
+1. Click **Build Now**
+2. Watch Console Output
+3. Pipeline will:
+   - ✅ Clone repository
+   - ✅ Build Docker images
+   - ✅ Push to Docker Hub
+   - ✅ Deploy to Kubernetes
+   - ✅ Verify deployment
+
+## 🌐 Access Your Application
+
+After successful deployment:
+
+```
+Jenkins:    http://13.233.75.163:8080
+Frontend:   http://<K8S_PUBLIC_IP>:30300
+Backend:    http://<K8S_PUBLIC_IP>:30500
+Prometheus: http://<K8S_PUBLIC_IP>:9090
+Grafana:    http://<K8S_PUBLIC_IP>:3001
+```
+
+## 📊 Monitoring Setup
+
+### Start Prometheus (One-time)
+
+```bash
+# SSH to K8s server
+ssh -i C:\Users\sarvn\Downloads\collabsphere-key.pem ubuntu@<K8S_PUBLIC_IP>
 
 # Start Prometheus
-./prometheus --config.file=prometheus.yml
+cd ~/prometheus
+nohup ./prometheus --config.file=prometheus.yml > prometheus.log 2>&1 &
+
+# Verify
+curl http://localhost:9090
 ```
 
-**Access:** http://YOUR_EC2_IP:9090
+### Configure Grafana
 
-### Grafana Setup
+1. Open: `http://<K8S_PUBLIC_IP>:3001`
+2. Login: `admin` / `admin`
+3. Add Prometheus data source:
+   - URL: `http://localhost:9090`
+   - Save & Test
+4. Import dashboards:
+   - Node.js: Dashboard ID `11159`
+   - System: Dashboard ID `1860`
 
-**Install Grafana:**
+## 🔧 Project Structure
+
+```
+.
+├── backend/                 # Node.js backend
+├── client/                  # React frontend
+├── docker/                  # Dockerfiles
+│   ├── backend.Dockerfile
+│   ├── frontend.Dockerfile
+│   └── docker-compose.yml
+├── jenkins/                 # CI/CD
+│   └── Jenkinsfile
+├── kubernetes/              # K8s manifests
+│   ├── deployment.yaml
+│   └── service.yaml
+├── terraform/               # Infrastructure
+│   ├── ec2.tf
+│   ├── terraform.tfvars
+│   └── .gitignore
+└── monitoring/              # Monitoring configs
+    ├── prometheus.yml
+    └── grafana-setup.md
+```
+
+## 🛠️ Troubleshooting
+
+### Issue: Jenkins can't SSH to K8s
+
+**Test connection:**
 ```bash
-sudo apt-get install -y software-properties-common
-sudo add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
-wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
-sudo apt-get update
-sudo apt-get install -y grafana
-
-# Start Grafana
-sudo systemctl start grafana-server
-sudo systemctl enable grafana-server
+# On Jenkins server
+sudo su - jenkins
+ssh -i ~/.ssh/k8s_key ubuntu@<K8S_PRIVATE_IP>
 ```
 
-**Access:** http://YOUR_EC2_IP:3001
-- Username: `admin`
-- Password: `admin`
+**If fails, check:**
+- Private key is correct
+- Using PRIVATE IP (not public)
+- Permissions: `chmod 600 ~/.ssh/k8s_key`
+- Security groups allow traffic
 
-**Configure:**
-1. Add Prometheus data source: `http://localhost:9090`
-2. Import dashboard ID: `11159` (Node.js metrics)
-3. Import dashboard ID: `1860` (System metrics)
-
-### Available Metrics
-
-```
-# HTTP Metrics
-http_request_duration_seconds - Request duration
-http_requests_total - Total requests
-
-# System Metrics
-nodejs_heap_size_used_bytes - Memory usage
-process_cpu_seconds_total - CPU usage
-```
-
----
-
-## 📡 API Documentation
-
-### Authentication
-
-**Register User:**
-```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
-
-**Login:**
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
-
-### Chat
-
-**Get Conversations:**
-```http
-GET /api/chat/conversations
-Authorization: Bearer <token>
-```
-
-**Send Message:**
-```http
-POST /api/chat/conversations/:id/messages
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "content": "Hello!"
-}
-```
-
-### Health Check
-
-```http
-GET /api/health
-
-Response:
-{
-  "success": true,
-  "message": "Server is running",
-  "uptime": 12345,
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Metrics
-
-```http
-GET /metrics
-
-Response: Prometheus metrics format
-```
-
----
-
-## 🔧 Configuration
-
-### Environment Variables
-
-**Backend (.env):**
-```env
-NODE_ENV=production
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/collabsphere
-JWT_SECRET=your_super_secret_key
-JWT_EXPIRE=7d
-CLIENT_URL=http://localhost:3000
-```
-
-**Frontend (.env):**
-```env
-REACT_APP_API_URL=http://localhost:5000
-```
-
-**Docker Compose (.env):**
-```env
-MONGO_ROOT_PASSWORD=admin123
-JWT_SECRET=your_jwt_secret
-```
-
----
-
-## 🧪 Testing
+### Issue: Minikube not running
 
 ```bash
-# Backend tests
-cd backend
-npm test
+# On K8s server
+minikube status
 
-# Frontend tests
-cd client
-npm test
-
-# E2E tests
-npm run test:e2e
+# If not running
+minikube start --driver=docker --cpus=2 --memory=4096
 ```
 
----
+### Issue: Pipeline fails
 
-## 📈 Performance
+**Check:**
+1. All 3 credentials added in Jenkins?
+   - `k8s-ssh-key`
+   - `k8s-server-ip`
+   - `dockerhub-credentials`
+2. Using K8s PRIVATE IP in credentials?
+3. SSH test successful?
+4. Minikube running on K8s server?
+5. Docker Hub credentials correct?
 
-- **Frontend:** Nginx with gzip compression
-- **Backend:** Node.js with clustering ready
-- **Database:** MongoDB with indexes
-- **Caching:** Redis ready (optional)
-- **CDN:** CloudFront ready (optional)
+### Issue: Pods not starting
 
----
+```bash
+# Check pod status
+kubectl get pods -n collabsphere
 
-## 🔒 Security
+# Check pod logs
+kubectl logs -f deployment/backend -n collabsphere
+kubectl logs -f deployment/frontend -n collabsphere
 
-- ✅ JWT authentication
-- ✅ HTTPS ready
-- ✅ CORS configured
-- ✅ Security headers (Nginx)
-- ✅ Environment variables for secrets
-- ✅ Docker security best practices
-- ✅ Rate limiting ready
-
----
-
-## 📊 CI/CD Pipeline Flow
-
-```
-┌─────────────┐
-│  Git Push   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Jenkins   │
-│   Webhook   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ Clone Repo  │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│Build Images │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Deploy    │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│Health Check │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Success   │
-└─────────────┘
+# Describe pod for events
+kubectl describe pod <POD_NAME> -n collabsphere
 ```
 
----
+## 💰 Cost Breakdown
 
-## 🎯 DevOps Highlights (For Resume/Interview)
+- **Jenkins EC2**: Already running (no new cost)
+- **Kubernetes EC2** (t2.medium): ~₹2,500/month (~$30/month)
 
-> **"Single EC2 Jenkins-based CI/CD pipeline with Dockerized MERN deployment and monitoring using Prometheus + Grafana"**
+**Total NEW cost: ₹2,500/month**
 
-### Key Achievements:
-- ✅ Automated deployment pipeline reducing deployment time by 80%
-- ✅ Containerized application with Docker for consistent environments
-- ✅ Implemented monitoring with 99.9% uptime tracking
-- ✅ Infrastructure as Code using Terraform
-- ✅ Kubernetes orchestration with auto-scaling
-- ✅ Zero-downtime deployments with health checks
+### Cost Optimization
 
----
+Stop K8s instance when not in use:
+
+```bash
+# Stop instance
+aws ec2 stop-instances --instance-ids <K8S_INSTANCE_ID>
+
+# Start when needed
+aws ec2 start-instances --instance-ids <K8S_INSTANCE_ID>
+```
+
+**Savings:** ~66% if running 8 hours/day
+
+## 🔐 Security Best Practices
+
+1. **Never commit secrets**
+   - `terraform.tfvars` is gitignored
+   - Use Jenkins credentials for sensitive data
+
+2. **Use private IPs**
+   - Jenkins → K8s communication uses private IP
+   - Faster and more secure
+
+3. **Regular updates**
+   ```bash
+   # Update K8s server
+   sudo apt update && sudo apt upgrade -y
+   ```
+
+4. **Backup important data**
+   ```bash
+   # Backup MongoDB
+   kubectl exec -n collabsphere deployment/mongo -- \
+     mongodump --out /backup/$(date +%Y%m%d)
+   ```
+
+## 📚 Additional Resources
+
+### Useful Commands
+
+```bash
+# Check all pods
+kubectl get pods -n collabsphere
+
+# Check services
+kubectl get svc -n collabsphere
+
+# Check deployments
+kubectl get deployments -n collabsphere
+
+# Scale deployment
+kubectl scale deployment/backend --replicas=3 -n collabsphere
+
+# Restart deployment
+kubectl rollout restart deployment/backend -n collabsphere
+
+# View logs
+kubectl logs -f deployment/backend -n collabsphere
+
+# Execute command in pod
+kubectl exec -it deployment/backend -n collabsphere -- bash
+```
+
+### Jenkins Pipeline Stages
+
+1. **Clone Repository** - Fetches code from GitHub
+2. **Build Docker Images** - Builds backend and frontend
+3. **Push to Docker Hub** - Uploads images
+4. **Deploy to Remote Kubernetes** - SSH to K8s and deploy
+5. **Verify Deployment** - Checks pod status
+6. **Cleanup** - Removes unused Docker images
+
+## 🎯 Benefits of This Setup
+
+✅ **Existing Jenkins Safe** - No changes to your current setup
+✅ **Fast Deployments** - Direct pull from Docker Hub
+✅ **Dedicated Resources** - K8s has its own server
+✅ **Professional Setup** - Industry-standard CI/CD
+✅ **Monitoring Included** - Prometheus + Grafana
+✅ **Easy to Scale** - Add more K8s nodes easily
+✅ **Cost Effective** - Jenkins is free, K8s is optimized
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
----
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## 📝 License
 
-ISC License - See LICENSE file for details
+This project is licensed under the MIT License.
+
+## 👥 Support
+
+For issues or questions:
+- Check the Troubleshooting section above
+- Review Jenkins console output
+- Check K8s pod logs: `kubectl logs -f deployment/<name> -n collabsphere`
+- Verify all credentials are added correctly
+
+## 🎉 Success Checklist
+
+After setup, verify:
+
+- [ ] Terraform created K8s EC2
+- [ ] SSH connection works (Jenkins → K8s)
+- [ ] All 3 credentials added in Jenkins
+- [ ] Pipeline builds successfully
+- [ ] Pods are running: `kubectl get pods -n collabsphere`
+- [ ] Frontend accessible at port 30300
+- [ ] Backend accessible at port 30500
+- [ ] Prometheus running at port 9090
+- [ ] Grafana accessible at port 3001
 
 ---
 
-## 👥 Author
+**Made with ❤️ for DevOps Learning**
 
-**Your Name**
-- GitHub: [@your-username](https://github.com/your-username)
-- LinkedIn: [Your Name](https://linkedin.com/in/your-profile)
-- Email: your.email@example.com
-
----
-
-## 🙏 Acknowledgments
-
-- Socket.io for real-time communication
-- MongoDB for database
-- React team for amazing frontend framework
-- Docker & Kubernetes communities
-- Prometheus & Grafana for monitoring
-
----
-
-## 📞 Support
-
-- 📧 Email: support@collabsphere.com
-- 🐛 Issues: [GitHub Issues](https://github.com/your-username/collabsphere/issues)
-- 📖 Docs: [Documentation](https://docs.collabsphere.com)
-
----
-
-<div align="center">
-
-**⭐ Star this repo if you find it helpful!**
-
-Made with ❤️ for the DevOps community
-
-</div>
+**Total Setup Time:** 15-20 minutes
+**Difficulty:** Intermediate
+**Prerequisites:** Basic AWS, Docker, and Kubernetes knowledge

@@ -1,38 +1,54 @@
-# Quick Start
+# ⚡ Quick Start Guide
 
-## 1. Start MongoDB
+## 3 Simple Steps
+
+### 1️⃣ Create K8s EC2 (5 min)
+
+```powershell
+cd terraform
+terraform apply
+```
+
+Copy the IPs from output.
+
+### 2️⃣ Setup SSH (5 min)
+
+**On K8s Server:**
 ```bash
-mongod
+ssh -i <PEM_FILE> ubuntu@<K8S_PUBLIC_IP>
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/jenkins_key -N ""
+cat ~/.ssh/jenkins_key.pub >> ~/.ssh/authorized_keys
+cat ~/.ssh/jenkins_key  # Copy this
 ```
 
-## 2. Install
+**On Jenkins Server:**
 ```bash
-cd backend && npm install
-cd ../client && npm install
+ssh -i <PEM_FILE> ubuntu@13.233.75.163
+sudo su - jenkins
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+nano ~/.ssh/k8s_key  # Paste key, save
+chmod 600 ~/.ssh/k8s_key
 ```
 
-## 3. Configure
+### 3️⃣ Configure Jenkins (5 min)
 
-**backend/.env:**
-```env
-MONGO_URI=mongodb://localhost:27017/collabsphere
-JWT_SECRET=your_secret
-PORT=5001
-CLIENT_URL=http://localhost:3000
-```
+1. Open: `http://13.233.75.163:8080`
+2. Install "SSH Agent" plugin
+3. Add 3 credentials:
+   - `k8s-ssh-key` (SSH private key)
+   - `k8s-server-ip` (K8s private IP)
+   - `dockerhub-credentials` (Docker Hub login)
+4. Create/update pipeline with `jenkins/Jenkinsfile`
+5. Build Now!
 
-**client/.env:**
-```env
-REACT_APP_API_URL=http://localhost:5001
-```
+## Done! 🎉
 
-## 4. Run
-```bash
-# Terminal 1
-cd backend && npm start
+Access your app:
+- Frontend: `http://<K8S_IP>:30300`
+- Backend: `http://<K8S_IP>:30500`
+- Prometheus: `http://<K8S_IP>:9090`
+- Grafana: `http://<K8S_IP>:3001`
 
-# Terminal 2
-cd client && npm start
-```
+## Need Help?
 
-Open http://localhost:3000
+Read the full [README.md](README.md) for detailed instructions and troubleshooting.
