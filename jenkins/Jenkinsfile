@@ -8,7 +8,7 @@ pipeline {
         DOCKER_HUB_REPO = "sarvnoorkaur"
         BACKEND_IMAGE = "collabsphere-backend"
         FRONTEND_IMAGE = "collabsphere-frontend"
-        K8S_SERVER = "3.108.195.150"
+        K8S_SERVER = "172.31.21.141"  // Get from: terraform output k8s_private_ip
     }
 
     stages {
