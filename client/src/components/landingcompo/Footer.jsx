@@ -52,7 +52,7 @@ export default function Footer() {
               className="flex items-center gap-2 text-slate-400 hover:text-cyan-400 transition-colors mb-3"
             >
               <Github className="w-5 h-5" />
-              <span>View on GitHub</span>
+              <span>View on GitHubbbbb</span>
             </a>
           </div>
         </div>
