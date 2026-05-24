@@ -37,7 +37,8 @@ export const SocketProvider = ({ children }) => {
     }
 
     // Create socket connection with authentication
-    const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5001', {
+    const newSocket = io("http://13.206.129.127:30500", {  // Hardcoded for Kubernetes
+      // const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5001', {
       auth: {
         token: token
       },

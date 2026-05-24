@@ -19,8 +19,8 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   // Configure axios defaults
-  axios.defaults.baseURL =
-  process.env.REACT_APP_API_URL || "http://localhost:5001";
+  axios.defaults.baseURL = "http://13.206.129.127:30500";  // Hardcoded for Kubernetes
+  // axios.defaults.baseURL = process.env.REACT_APP_API_URL || "http://localhost:5001";
   axios.defaults.withCredentials = true;
 
   // Set auth token in axios headers
