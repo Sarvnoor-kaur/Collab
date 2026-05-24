@@ -1,14 +1,15 @@
-
-
-
 pipeline {
     agent any
 
     environment {
         DOCKER_HUB_REPO = "sarvnoorkaur"
+
         BACKEND_IMAGE = "collabsphere-backend"
         FRONTEND_IMAGE = "collabsphere-frontend"
-        K8S_SERVER = "172.31.21.141"  // Get from: terraform output k8s_private_ip
+
+        IMAGE_TAG = "${BUILD_NUMBER}"
+
+        K8S_SERVER = "172.31.21.141"
     }
 
     stages {
@@ -23,7 +24,9 @@ pipeline {
         stage('Build Backend Image') {
             steps {
                 sh '''
-                docker build -t $DOCKER_HUB_REPO/$BACKEND_IMAGE:latest \
+                docker build \
+                -t $DOCKER_HUB_REPO/$BACKEND_IMAGE:$IMAGE_TAG \
+                -t $DOCKER_HUB_REPO/$BACKEND_IMAGE:latest \
                 -f docker/backend.Dockerfile ./backend
                 '''
             }
@@ -32,7 +35,9 @@ pipeline {
         stage('Build Frontend Image') {
             steps {
                 sh '''
-                docker build -t $DOCKER_HUB_REPO/$FRONTEND_IMAGE:latest \
+                docker build \
+                -t $DOCKER_HUB_REPO/$FRONTEND_IMAGE:$IMAGE_TAG \
+                -t $DOCKER_HUB_REPO/$FRONTEND_IMAGE:latest \
                 -f docker/frontend.Dockerfile ./client
                 '''
             }
@@ -40,6 +45,7 @@ pipeline {
 
         stage('Push Images to Docker Hub') {
             steps {
+
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-credentials',
                     usernameVariable: 'USER',
@@ -49,7 +55,10 @@ pipeline {
                     sh '''
                     echo $PASS | docker login -u $USER --password-stdin
 
+                    docker push $DOCKER_HUB_REPO/$BACKEND_IMAGE:$IMAGE_TAG
                     docker push $DOCKER_HUB_REPO/$BACKEND_IMAGE:latest
+
+                    docker push $DOCKER_HUB_REPO/$FRONTEND_IMAGE:$IMAGE_TAG
                     docker push $DOCKER_HUB_REPO/$FRONTEND_IMAGE:latest
 
                     docker logout
@@ -58,8 +67,17 @@ pipeline {
             }
         }
 
+        stage('Cleanup Local Docker Images') {
+            steps {
+                sh '''
+                docker system prune -a -f --volumes || true
+                '''
+            }
+        }
+
         stage('Deploy to K3s') {
             steps {
+
                 sh '''
                 ssh -o StrictHostKeyChecking=no ubuntu@$K8S_SERVER "
 
@@ -67,27 +85,43 @@ pipeline {
 
                     git pull &&
 
-                    sudo kubectl apply -f kubernetes/
+                    sudo kubectl apply -f kubernetes/ &&
 
-                    sudo kubectl rollout restart deployment/backend -n collabsphere
+                    sudo kubectl rollout restart deployment/backend -n collabsphere &&
 
-                    sudo kubectl rollout restart deployment/frontend -n collabsphere
+                    sudo kubectl rollout restart deployment/frontend -n collabsphere &&
+
+                    sudo kubectl rollout restart deployment/mongo -n collabsphere &&
+
+                    sudo kubectl rollout status deployment/backend -n collabsphere &&
+
+                    sudo kubectl rollout status deployment/frontend -n collabsphere &&
+
+                    sudo kubectl rollout status deployment/mongo -n collabsphere &&
+
+                    sudo k3s crictl rmi --prune || true &&
 
                     sudo kubectl get pods -n collabsphere
                 "
                 '''
             }
         }
-
     }
 
     post {
+
         success {
             echo '✅ Deployment Successful!'
         }
 
         failure {
             echo '❌ Deployment Failed!'
+        }
+
+        always {
+            sh '''
+            docker system prune -a -f --volumes || true
+            '''
         }
     }
 }
