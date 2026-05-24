@@ -23,7 +23,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-slate-400 text-sm">
-              Empowering teams to collaborate seamlessly across the globe.
+              Empowering teams testtttttttt to collaborate seamlessly across the globe.
             </p>
           </div>
 
