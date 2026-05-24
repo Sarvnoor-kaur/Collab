@@ -31,7 +31,35 @@ A complete DevOps setup for CollabSphere (MERN stack) with Jenkins CI/CD, Kubern
 
 ## 🚀 Quick Start (15 minutes)
 
-### Prerequisites
+### Method 1: Automated with Ansible (Recommended) ⚡
+
+**Prerequisites:**
+- Ansible installed (WSL/Linux/Mac)
+- AWS credentials
+- SSH key pair
+
+**Steps:**
+```powershell
+# 1. Create infrastructure
+cd terraform
+terraform apply
+
+# 2. Update Ansible inventory with K8s IP
+# Edit ansible/inventory.ini
+
+# 3. Run Ansible (automates everything!)
+cd ../ansible
+ansible-playbook playbooks/site.yml
+
+# Done! Everything configured automatically
+```
+
+**Time:** 12-15 minutes
+**Read:** [ANSIBLE_INTEGRATION.md](ANSIBLE_INTEGRATION.md)
+
+### Method 2: Manual Setup
+
+**Prerequisites:**
 
 - ✅ Existing Jenkins EC2 running
 - ✅ AWS credentials
