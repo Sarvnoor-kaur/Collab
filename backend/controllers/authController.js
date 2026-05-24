@@ -121,14 +121,14 @@ exports.logout = async (req, res, next) => {
 const sendTokenResponse = (user, statusCode, res) => {
   // Create token
   const token = user.getSignedJwtToken();
-
+// 👉 It controls how the cookie is stored and behaves in the browser
   const options = {
     expires: new Date(
       Date.now() + process.env.COOKIE_EXPIRE * 24 * 60 * 60 * 1000
     ),
-    httpOnly: true,
+    httpOnly: true,  //Prevents JavaScript from accessing the cookie
     secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-    sameSite: 'strict'
+    sameSite: 'strict'     //Prevents cookie from being sent in cross-site requests
   };
 
   res
@@ -145,3 +145,21 @@ const sendTokenResponse = (user, statusCode, res) => {
       }
     });
 };
+
+
+// These options define cookie security and lifecycle. expires sets the lifetime of the cookie, httpOnly prevents JavaScript access for security, secure ensures cookies are only sent over HTTPS in production, and sameSite: 'strict' protects against CSRF attacks by restricting cross-site request
+
+
+
+// User logs in / registers
+        // ↓
+// JWT token generated
+//         ↓
+// Token stored in cookie
+//         ↓
+// Response sent to frontend
+//         ↓
+// Frontend now authenticated
+
+
+// authentication defination: process of verifying identity of a user, device, or entity. In our app, we use JWT tokens to authenticate users after they log in or register. The token is stored in a cookie and sent with each request to protected routes, allowing the server to verify the user's identity and grant access to resources.

@@ -122,3 +122,18 @@ export const AuthProvider = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+
+
+
+
+
+// 🧠 What this code does (Big Picture)
+
+// This file creates a global authentication system using React Context so that:
+
+// Any component can access the logged-in user
+// Login / Register / Logout works globally
+// Token is stored in localStorage
+// Axios automatically sends token in API requests
+// User stays logged in even after page refresh

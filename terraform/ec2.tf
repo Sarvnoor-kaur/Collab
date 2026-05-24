@@ -1,3 +1,6 @@
+# Terraform Configuration for Existing CollabSphere Infrastructure
+# This file documents your existing 3 EC2 instances
+
 terraform {
   required_version = ">= 1.0"
   
@@ -34,243 +37,158 @@ variable "aws_secret_key" {
   sensitive   = true
 }
 
-variable "k8s_instance_type" {
-  description = "Kubernetes EC2 instance type"
-  type        = string
-  default     = "t2.medium"
-}
-
 variable "key_name" {
   description = "SSH key pair name"
   type        = string
   default     = "collabsphere-key"
 }
 
-variable "existing_jenkins_ip" {
-  description = "IP of existing Jenkins server (optional - for reference only)"
-  type        = string
-  default     = "13.233.75.163"
-}
-
-# Security Group for Kubernetes (Only new EC2)
-resource "aws_security_group" "k8s_sg" {
-  name        = "collabsphere-k8s-sg"
-  description = "Security group for Kubernetes cluster"
-
-  # SSH
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "SSH"
+# Data sources to reference existing instances
+data "aws_instance" "jenkins" {
+  filter {
+    name   = "tag:Name"
+    values = ["jenkins-docker"]
   }
 
-  # HTTP
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP"
-  }
-
-  # Frontend
-  ingress {
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Frontend"
-  }
-
-  # Backend
-  ingress {
-    from_port   = 5000
-    to_port     = 5000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Backend API"
-  }
-
-  # Prometheus
-  ingress {
-    from_port   = 9090
-    to_port     = 9090
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Prometheus"
-  }
-
-  # Grafana
-  ingress {
-    from_port   = 3001
-    to_port     = 3001
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Grafana"
-  }
-
-  # Kubernetes NodePort - Frontend
-  ingress {
-    from_port   = 30300
-    to_port     = 30300
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Kubernetes Frontend NodePort"
-  }
-
-  # Kubernetes NodePort - Backend
-  ingress {
-    from_port   = 30500
-    to_port     = 30500
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Kubernetes Backend NodePort"
-  }
-
-  # Outbound
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound"
-  }
-
-  tags = {
-    Name = "collabsphere-k8s-sg"
+  filter {
+    name   = "instance-state-name"
+    values = ["running"]
   }
 }
 
-# Kubernetes EC2 Instance (NEW - Only this will be created)
-resource "aws_instance" "kubernetes" {
-  ami           = "ami-0dee22c13ea7a9a67" # Ubuntu 22.04 for ap-south-1
-  instance_type = var.k8s_instance_type
-  key_name      = var.key_name
-
-  vpc_security_group_ids = [aws_security_group.k8s_sg.id]
-
-  root_block_device {
-    volume_size = 30
-    volume_type = "gp3"
+data "aws_instance" "k8s" {
+  filter {
+    name   = "tag:Name"
+    values = ["k8s-server"]
   }
 
-  user_data = <<-EOF
-              #!/bin/bash
-              set -e
-              
-              # Update system
-              apt-get update -y
-              
-              # Install Docker
-              apt-get install -y docker.io docker-compose
-              systemctl start docker
-              systemctl enable docker
-              usermod -aG docker ubuntu
-              
-              # Install kubectl
-              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-              install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-              rm kubectl
-              
-              # Install Minikube
-              curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-              install minikube-linux-amd64 /usr/local/bin/minikube
-              rm minikube-linux-amd64
-              
-              # Start Minikube as ubuntu user
-              su - ubuntu -c "minikube start --driver=docker --cpus=2 --memory=4096"
-              su - ubuntu -c "minikube addons enable ingress"
-              
-              # Install Prometheus
-              cd /home/ubuntu
-              wget https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz
-              tar xvfz prometheus-*.tar.gz
-              rm prometheus-*.tar.gz
-              mv prometheus-* prometheus
-              chown -R ubuntu:ubuntu prometheus
-              
-              # Install Grafana
-              apt-get install -y software-properties-common
-              add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
-              wget -q -O - https://packages.grafana.com/gpg.key | apt-key add -
-              apt-get update
-              apt-get install -y grafana
-              systemctl start grafana-server
-              systemctl enable grafana-server
-              
-              echo "K8S_SETUP_COMPLETE" > /tmp/setup-complete.txt
-              EOF
-
-  tags = {
-    Name = "CollabSphere-Kubernetes"
+  filter {
+    name   = "instance-state-name"
+    values = ["running"]
   }
 }
 
-# Outputs
-output "existing_jenkins_ip" {
-  value       = var.existing_jenkins_ip
-  description = "Your existing Jenkins server IP (for reference)"
+data "aws_instance" "monitoring" {
+  filter {
+    name   = "tag:Name"
+    values = ["monitoring-se*"]
+  }
+
+  filter {
+    name   = "instance-state-name"
+    values = ["running"]
+  }
 }
 
-output "k8s_public_ip" {
-  value       = aws_instance.kubernetes.public_ip
-  description = "Public IP of NEW Kubernetes server"
+# Outputs for existing instances
+output "jenkins_instance_info" {
+  value = {
+    name          = "jenkins-docker"
+    instance_id   = data.aws_instance.jenkins.id
+    instance_type = data.aws_instance.jenkins.instance_type
+    public_ip     = data.aws_instance.jenkins.public_ip
+    private_ip    = data.aws_instance.jenkins.private_ip
+    availability_zone = data.aws_instance.jenkins.availability_zone
+  }
+  description = "Jenkins EC2 instance information"
 }
 
-output "k8s_private_ip" {
-  value       = aws_instance.kubernetes.private_ip
-  description = "Private IP of Kubernetes server (use this in Jenkins)"
+output "k8s_instance_info" {
+  value = {
+    name          = "k8s-server"
+    instance_id   = data.aws_instance.k8s.id
+    instance_type = data.aws_instance.k8s.instance_type
+    public_ip     = data.aws_instance.k8s.public_ip
+    private_ip    = data.aws_instance.k8s.private_ip
+    availability_zone = data.aws_instance.k8s.availability_zone
+  }
+  description = "Kubernetes EC2 instance information"
+}
+
+output "monitoring_instance_info" {
+  value = {
+    name          = "monitoring-server"
+    instance_id   = data.aws_instance.monitoring.id
+    instance_type = data.aws_instance.monitoring.instance_type
+    public_ip     = data.aws_instance.monitoring.public_ip
+    private_ip    = data.aws_instance.monitoring.private_ip
+    availability_zone = data.aws_instance.monitoring.availability_zone
+  }
+  description = "Monitoring EC2 instance information"
+}
+
+# Quick reference outputs
+output "jenkins_url" {
+  value       = "http://${data.aws_instance.jenkins.public_ip}:8080"
+  description = "Jenkins URL"
 }
 
 output "frontend_url" {
-  value       = "http://${aws_instance.kubernetes.public_ip}:30300"
+  value       = "http://${data.aws_instance.k8s.public_ip}:30300"
   description = "Frontend URL (via Kubernetes NodePort)"
 }
 
 output "backend_url" {
-  value       = "http://${aws_instance.kubernetes.public_ip}:30500"
+  value       = "http://${data.aws_instance.k8s.public_ip}:30500"
   description = "Backend API URL (via Kubernetes NodePort)"
 }
 
 output "prometheus_url" {
-  value       = "http://${aws_instance.kubernetes.public_ip}:9090"
+  value       = "http://${data.aws_instance.monitoring.public_ip}:9090"
   description = "Prometheus URL"
 }
 
 output "grafana_url" {
-  value       = "http://${aws_instance.kubernetes.public_ip}:3001"
+  value       = "http://${data.aws_instance.monitoring.public_ip}:3001"
   description = "Grafana URL"
 }
 
-output "ssh_k8s" {
-  value       = "ssh -i ${var.key_name}.pem ubuntu@${aws_instance.kubernetes.public_ip}"
-  description = "SSH command for NEW Kubernetes server"
+output "ssh_commands" {
+  value = {
+    jenkins    = "ssh -i ${var.key_name}.pem ubuntu@${data.aws_instance.jenkins.public_ip}"
+    k8s        = "ssh -i ${var.key_name}.pem ubuntu@${data.aws_instance.k8s.public_ip}"
+    monitoring = "ssh -i ${var.key_name}.pem ubuntu@${data.aws_instance.monitoring.public_ip}"
+  }
+  description = "SSH commands for all instances"
 }
 
-output "next_steps" {
+output "instance_summary" {
   value = <<-EOT
   
   ========================================
-  ✅ Kubernetes EC2 Created!
+  ✅ CollabSphere Infrastructure Summary
   ========================================
   
-  Your EXISTING Jenkins: ${var.existing_jenkins_ip}:8080
-  NEW Kubernetes Server: ${aws_instance.kubernetes.public_ip}
+  Instance 1: Jenkins-Docker
+  - Type: ${data.aws_instance.jenkins.instance_type}
+  - Zone: ${data.aws_instance.jenkins.availability_zone}
+  - Public IP: ${data.aws_instance.jenkins.public_ip}
+  - Private IP: ${data.aws_instance.jenkins.private_ip}
+  - URL: http://${data.aws_instance.jenkins.public_ip}:8080
   
-  📋 Next Steps:
+  Instance 2: Kubernetes (K3s)
+  - Type: ${data.aws_instance.k8s.instance_type}
+  - Zone: ${data.aws_instance.k8s.availability_zone}
+  - Public IP: ${data.aws_instance.k8s.public_ip}
+  - Private IP: ${data.aws_instance.k8s.private_ip}
+  - Frontend: http://${data.aws_instance.k8s.public_ip}:30300
+  - Backend: http://${data.aws_instance.k8s.public_ip}:30500
   
-  1. Setup SSH from Jenkins to K8s:
-     Read: EXISTING_JENKINS_SETUP.md
+  Instance 3: Monitoring
+  - Type: ${data.aws_instance.monitoring.instance_type}
+  - Zone: ${data.aws_instance.monitoring.availability_zone}
+  - Public IP: ${data.aws_instance.monitoring.public_ip}
+  - Private IP: ${data.aws_instance.monitoring.private_ip}
+  - Prometheus: http://${data.aws_instance.monitoring.public_ip}:9090
+  - Grafana: http://${data.aws_instance.monitoring.public_ip}:3001
   
-  2. Configure Jenkins credentials:
-     - k8s-ssh-key (SSH private key)
-     - k8s-server-ip (${aws_instance.kubernetes.private_ip})
+  ========================================
+  📋 Jenkins Configuration:
+  ========================================
   
-  3. Update Jenkinsfile and deploy!
+  Use K8s PRIVATE IP in Jenkins: ${data.aws_instance.k8s.private_ip}
   
   ========================================
   EOT
-  description = "Next steps to connect Jenkins with K8s"
+  description = "Complete infrastructure summary"
 }
