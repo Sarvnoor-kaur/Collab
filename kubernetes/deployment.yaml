@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: collabsphere
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -11,6 +12,7 @@ metadata:
 data:
   NODE_ENV: "production"
   PORT: "5000"
+
 ---
 apiVersion: v1
 kind: Secret
@@ -21,6 +23,7 @@ type: Opaque
 stringData:
   MONGO_URI: "mongodb://mongo-service:27017/collabsphere"
   JWT_SECRET: "your_jwt_secret_key"
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -32,88 +35,130 @@ spec:
   selector:
     matchLabels:
       app: mongo
+
   template:
     metadata:
       labels:
         app: mongo
+
     spec:
       containers:
-      - name: mongo
-        image: mongo:7.0
-        ports:
-        - containerPort: 27017
-        volumeMounts:
-        - name: mongo-storage
-          mountPath: /data/db
+        - name: mongo
+          image: mongo:7.0
+
+          ports:
+            - containerPort: 27017
+
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+
+          volumeMounts:
+            - name: mongo-storage
+              mountPath: /data/db
+
       volumes:
-      - name: mongo-storage
-        emptyDir: {}
+        - name: mongo-storage
+          emptyDir: {}
+
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
   namespace: collabsphere
+
 spec:
-  replicas: 2
+  replicas: 1
+
   selector:
     matchLabels:
       app: backend
+
   template:
     metadata:
       labels:
         app: backend
+
     spec:
       containers:
-      - name: backend
-        image: sarvnoorkaur/collabsphere-backend:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 5000
-        envFrom:
-        - configMapRef:
-            name: backend-config
-        - secretRef:
-            name: backend-secret
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: 5000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
+        - name: backend
+          image: sarvnoorkaur/collabsphere-backend:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 5000
+
+          envFrom:
+            - configMapRef:
+                name: backend-config
+
+            - secretRef:
+                name: backend-secret
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+
+            initialDelaySeconds: 15
+            periodSeconds: 5
+
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
   namespace: collabsphere
+
 spec:
-  replicas: 2
+  replicas: 1
+
   selector:
     matchLabels:
       app: frontend
+
   template:
     metadata:
       labels:
         app: frontend
+
     spec:
       containers:
-      - name: frontend
-        image: sarvnoorkaur/collabsphere-frontend:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 80
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
+        - name: frontend
+          image: sarvnoorkaur/collabsphere-frontend:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 80
+
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
