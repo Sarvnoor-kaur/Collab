@@ -2,7 +2,8 @@
 // Usage: import { API, ROUTES } from '../config/apiRoutes';
 
 export const API = {
-  BASE: process.env.REACT_APP_API_URL || "http://localhost:5001",
+  BASE: "http://13.206.129.127:30500",  // Hardcoded for Kubernetes deployment
+  // BASE: process.env.REACT_APP_API_URL || "http://localhost:5001",
 
   AUTH: {
     LOGIN: "/api/auth/login",
